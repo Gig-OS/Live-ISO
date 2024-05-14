@@ -68,7 +68,7 @@ crun emerge -uvDN @world || exit 1
 
 # run hooks in squashfs
 for hook in "${WORKDIR}"/hooks/*;do
-    source $hook || exit 1
+    source "${hook}" || exit 1
 done
 
 # make squashfs
