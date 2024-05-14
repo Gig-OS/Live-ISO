@@ -1,0 +1,14 @@
+root/.bash_history
+proc/*
+sys/*
+dev/*
+run/*
+boot/grub
+root/*
+var/db/repos/*
+var/tmp/portage/*
+var/cache/distfiles/*
+var/cache/binpkgs/*
+var/log/*
+var/tmp/*
+mnt/*

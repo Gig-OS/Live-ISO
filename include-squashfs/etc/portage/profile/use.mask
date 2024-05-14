@@ -1,0 +1,2 @@
+-kf6compat
+-qt6
