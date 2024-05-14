@@ -6,7 +6,7 @@ ARCH=amd64
 MICROARCH=amd64
 SUFFIX=desktop-systemd
 DIST="https://ftp-osl.osuosl.org/pub/gentoo/releases/${ARCH}/autobuilds"
-TMPFS="32G"
+TMPFS="128G"
 
 function crun () {
 	"${WORKDIR}"/arch-scripts/arch-chroot "${WORKDIR}/squashfs" bash -c "$*"
@@ -58,7 +58,15 @@ rsync -rl --copy-unsafe-links "${WORKDIR}"/include-squashfs/* "${WORKDIR}/squash
 
 # sync portage & update world
 crun emerge-webrsync || true
-crun emerge --sync || exit 1
+# try three times to sync
+for n in {1..3};do
+    if (crun emerge --sync);then
+        break;
+    fi
+    if [ "${n}" == "3" ];then
+        exit 1
+    fi
+done
 if ( ! findmnt "${WORKDIR}/squashfs/var/tmp/portage" ) && [ -n "${TMPFS}" ];then
     crun mount -t tmpfs -o size="${TMPFS}",uid=portage,gid=portage,mode=775 tmpfs /var/tmp/portage
 elif ( findmnt "${WORKDIR}/squashfs/var/tmp/portage" ) && [ -n "${TMPFS}" ];then
