@@ -12,6 +12,9 @@ function crun () {
 	"${WORKDIR}"/arch-scripts/arch-chroot "${WORKDIR}/squashfs" bash -c "$*"
 }
 
+# ctrl+c anytime to stop
+trap "exit" INT
+
 # must run as root
 if (( EUID != 0 ));then
     echo 'This script must be run with root privileges'
