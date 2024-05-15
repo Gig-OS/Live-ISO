@@ -75,7 +75,7 @@ if ( ! findmnt "${WORKDIR}/squashfs/var/tmp/portage" ) && [ -n "${TMPFS}" ];then
 elif ( findmnt "${WORKDIR}/squashfs/var/tmp/portage" ) && [ -n "${TMPFS}" ];then
     crun mount -o remount,size="${TMPFS}" /var/tmp/portage
 fi
-crun emerge -uvDN @world || exit 1
+crun emerge -uvDN --keep-going @world || exit 1
 
 # run hooks in squashfs
 for hook in "${WORKDIR}"/hooks/*;do
