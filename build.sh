@@ -84,6 +84,7 @@ fi
 # upgrade portage first
 crun emerge -vu1 portage
 crun emerge -uvDN --jobs 3 --keep-going @world || exit 1
+crun emerge -c || exit 1
 
 # run hooks in squashfs
 for hook in "${WORKDIR}"/hooks/*;do
