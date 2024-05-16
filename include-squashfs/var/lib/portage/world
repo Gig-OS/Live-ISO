@@ -16,7 +16,9 @@ net-misc/networkmanager
 sys-boot/grub
 sys-firmware/nvidia-firmware
 sys-fs/btrfs-progs
+sys-fs/cryptsetup
 sys-fs/dosfstools
+sys-fs/mtools
 sys-fs/squashfs-tools
 sys-kernel/gentoo-kernel-bin
 sys-kernel/linux-firmware
