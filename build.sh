@@ -6,7 +6,7 @@ ARCH=amd64
 MICROARCH=amd64
 SUFFIX=desktop-systemd
 DIST="https://ftp-osl.osuosl.org/pub/gentoo/releases/${ARCH}/autobuilds"
-TMPFS="32G"
+#TMPFS="32G"
 
 function crun () {
 	"${WORKDIR}"/arch-scripts/arch-chroot "${WORKDIR}/squashfs" bash -c "$*"
@@ -39,7 +39,8 @@ fi
 pushd "${WORKDIR}/squashfs" || exit 1
 if ( ! grep 'unpackok' "${WORKDIR}/stat" );then
     tar xpf "${STAGE3}" --xattrs-include='*.*' --numeric-owner \
-        && echo 'unpackok' >> "${WORKDIR}/stat" || exit 1
+        && echo 'unpackok' >> "${WORKDIR}/stat" \
+	&& rm "${STAGE3}" || exit 1
 fi
 popd || exit 1
 
