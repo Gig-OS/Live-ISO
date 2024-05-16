@@ -6,7 +6,7 @@ ARCH=amd64
 MICROARCH=amd64
 SUFFIX=desktop-systemd
 DIST="https://ftp-osl.osuosl.org/pub/gentoo/releases/${ARCH}/autobuilds"
-TMPFS="128G"
+TMPFS="32G"
 
 function crun () {
 	"${WORKDIR}"/arch-scripts/arch-chroot "${WORKDIR}/squashfs" bash -c "$*"
@@ -31,7 +31,7 @@ STAGE3="$(basename "${STAGE3PATH}")"
 
 if ( ! grep 'stage3downloadok' "${WORKDIR}/stat" );then
     rm -rf "squashfs/${STAGE3}"
-    wget -q "${DIST}/${STAGE3PATH}" -O "squashfs/${STAGE3}" \
+    wget "${DIST}/${STAGE3PATH}" -O "squashfs/${STAGE3}" \
         && echo 'stage3downloadok' >> "${WORKDIR}/stat" || exit 1
 fi
 
@@ -76,7 +76,7 @@ elif ( findmnt "${WORKDIR}/squashfs/var/tmp/portage" ) && [ -n "${TMPFS}" ];then
     crun mount -o remount,size="${TMPFS}" /var/tmp/portage
 fi
 # upgrade portage first
-crun emerge --vu1 portage
+crun emerge -vu1 portage
 crun emerge -uvDN --keep-going @world || exit 1
 
 # run hooks in squashfs
