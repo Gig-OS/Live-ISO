@@ -1,0 +1,28 @@
+on:
+  push:
+    branches:
+      - KDE
+  pull_request:
+    branches:
+      - KDE
+  schedule:
+  - cron: "0 0 * * 5"
+jobs:
+  build_iso:
+    name: Build ISO
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: install deps
+        run: |
+          sudo apt update
+          sudo apt -y install wget xz-utils git rsync make squashfs-tools asciidoc
+      - name: build iso
+        run: |
+          sudo bash -x ./build.sh
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ISO
+          path: ./*.iso
