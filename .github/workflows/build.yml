@@ -18,6 +18,10 @@ jobs:
         run: |
           sudo apt update
           sudo apt -y install wget xz-utils git rsync make squashfs-tools asciidoc
+      - name: check hardware
+        run: |
+          lscpu
+          free -m
       - name: build iso
         run: |
           sudo bash -x ./build.sh

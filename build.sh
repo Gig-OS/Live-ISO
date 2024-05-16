@@ -6,7 +6,7 @@ ARCH=amd64
 MICROARCH=amd64
 SUFFIX=desktop-systemd
 DIST="https://ftp-osl.osuosl.org/pub/gentoo/releases/${ARCH}/autobuilds"
-#TMPFS="32G"
+TMPFS="8G"
 
 function crun () {
 	"${WORKDIR}"/arch-scripts/arch-chroot "${WORKDIR}/squashfs" bash -c "$*"
@@ -71,6 +71,11 @@ for n in {1..3};do
         exit 1
     fi
 done
+# init notmpfs dir
+crun mkdir /var/tmp/notmpfs
+crun chown portage:portage /var/tmp/notmpfs
+crun chmod 775 /var/tmp/notmpfs
+# mount tmpfs
 if ( ! findmnt "${WORKDIR}/squashfs/var/tmp/portage" ) && [ -n "${TMPFS}" ];then
     crun mount -t tmpfs -o size="${TMPFS}",uid=portage,gid=portage,mode=775 tmpfs /var/tmp/portage
 elif ( findmnt "${WORKDIR}/squashfs/var/tmp/portage" ) && [ -n "${TMPFS}" ];then
@@ -78,7 +83,7 @@ elif ( findmnt "${WORKDIR}/squashfs/var/tmp/portage" ) && [ -n "${TMPFS}" ];then
 fi
 # upgrade portage first
 crun emerge -vu1 portage
-crun emerge -uvDN --keep-going @world || exit 1
+crun emerge -uvDN --jobs 3 --keep-going @world || exit 1
 
 # run hooks in squashfs
 for hook in "${WORKDIR}"/hooks/*;do
