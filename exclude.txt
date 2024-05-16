@@ -1,4 +1,5 @@
 root/.bash_history
+stage3*
 proc/*
 sys/*
 dev/*
