@@ -31,7 +31,7 @@ STAGE3="$(basename "${STAGE3PATH}")"
 
 if ( ! grep 'stage3downloadok' "${WORKDIR}/stat" );then
     rm -rf "squashfs/${STAGE3}"
-    wget "${DIST}/${STAGE3PATH}" -O "squashfs/${STAGE3}" \
+    wget -q "${DIST}/${STAGE3PATH}" -O "squashfs/${STAGE3}" \
         && echo 'stage3downloadok' >> "${WORKDIR}/stat" || exit 1
 fi
 
