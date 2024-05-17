@@ -4,6 +4,8 @@ WORKDIR="$(dirname "$(realpath "$0")")"
 
 source "${WORKDIR}"/config
 
+# refresh MAKEOPTS
+
 function cleanbuild () {
     umount -l "${WORKDIR}/squashfs/var/tmp/portage" || true
     umount -l "${WORKDIR}/squashfs/mnt/gen-iso" || true
@@ -143,6 +145,9 @@ buildarchscript
 
 # copy extra staff for squashfs
 rsync -rl --copy-unsafe-links "${WORKDIR}"/include-squashfs/* "${WORKDIR}/squashfs/"
+
+# refresh MAKEOPTS
+sed -i "s/MAKEOPTS=\".*\"/MAKEOPTS=\""${MAKEOPTS}"\"/g" "${WORKDIR}/squashfs/etc/portage/make.conf/common"
 
 mounttmpfs
 
