@@ -85,9 +85,9 @@ fi
 
 function mounttmpfs () {
     # init notmpfs dir
-    crun mkdir -p /var/tmp/notmpfs
-    crun chown portage:portage /var/tmp/notmpfs
-    crun chmod 775 /var/tmp/notmpfs
+    crun mkdir -p /var/tmp/{notmpfs,portage}
+    crun chown portage:portage /var/tmp/{notmpfs,portage}
+    crun chmod 775 /var/tmp/{notmpfs,portage}
     # mount tmpfs
     if ( ! findmnt "${WORKDIR}/squashfs/var/tmp/portage" ) && [ -n "${TMPFS}" ];then
         crun mount -t tmpfs -o size="${TMPFS}",uid=portage,gid=portage,mode=775 tmpfs /var/tmp/portage
@@ -145,6 +145,9 @@ buildarchscript
 rsync -rl --copy-unsafe-links "${WORKDIR}"/include-squashfs/* "${WORKDIR}/squashfs/"
 
 mounttmpfs
+
+# DNS
+cp --dereference /etc/resolv.conf "${WORKDIR}/squashfs"/etc/
 
 syncrepo
 
