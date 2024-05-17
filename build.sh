@@ -152,7 +152,7 @@ syncrepo
 crun emerge -vu1 portage
 # we need git!
 if ( ! crun which git);then
-    crun emerge -vu git || exit 1
+    crun emerge -vu dev-vcs/git || exit 1
 fi
 # upgrade system
 crun emerge -uvDN --jobs 3 --keep-going @world || exit 1
