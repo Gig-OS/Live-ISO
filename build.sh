@@ -153,12 +153,13 @@ syncrepo
 
 # upgrade portage first
 crun emerge -vu1 portage
-# we need git!
+# we need git to sync overlay
 if ( ! crun which git);then
     crun emerge -vu dev-vcs/git || exit 1
 fi
+syncrepo
 # upgrade system
-crun emerge -uvDN --jobs 3 --keep-going @world || exit 1
+crun emerge -uvDN --jobs 3 --keep-going @world @live-rebuild || exit 1
 crun emerge -c || exit 1
 
 # run hooks in squashfs
