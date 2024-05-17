@@ -1,0 +1,6 @@
+ARCH=amd64
+MICROARCH=amd64
+SUFFIX=desktop-systemd
+DIST="https://ftp-osl.osuosl.org/pub/gentoo/releases/${ARCH}/autobuilds"
+GITMIRROR="https://github.com/gentoo-mirror/gentoo.git"
+TMPFS="128G"

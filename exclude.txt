@@ -13,3 +13,7 @@ var/cache/binpkgs/*
 var/log/*
 var/tmp/*
 mnt/*
+etc/portage/package.accept_keywords/calamares
+etc/portage/package.use/calamares
+etc/portage/package.env
+etc/portage/env

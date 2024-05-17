@@ -1,6 +1,7 @@
 USE="
 discover
 flatpak
+kcm
 qt6
 kf6compat
 dracut

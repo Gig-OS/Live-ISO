@@ -1,3 +1,5 @@
 squashfs
 latest-stage3-amd64-desktop-systemd.txt
 stat
+*.iso
+iso

@@ -13,10 +13,10 @@
 # Files
 
 * build.sh: main script to build
+* config: build options
 * arch-scripts: arch-chroot scripts
 * hooks: scripts to run after upgrade system
 * include-squashfs: files that will copy to suqashfs before upgrade
-* include-squashfs.after: files that will copy to suqashfs after upgrade
 
 # Tips
 
