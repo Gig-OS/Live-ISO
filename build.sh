@@ -120,7 +120,7 @@ function buildiso () {
         mkdir -p "${WORKDIR}/squashfs/mnt/gen-iso"
         mount --bind "${WORKDIR}" "${WORKDIR}/squashfs/mnt/gen-iso"
     fi
-    crun grub-mkrescue -o /mnt/gen-iso/gig-os.iso /mnt/gen-iso/iso -- -as mkisofs -V 'Gig-OS' || exit 1
+    crun grub-mkrescue -o /mnt/gen-iso/gig-os-"$(date +%Y%m%d)".iso /mnt/gen-iso/iso -- -as mkisofs -V 'Gig-OS' || exit 1
 }
 
 # ctrl+c anytime to stop
