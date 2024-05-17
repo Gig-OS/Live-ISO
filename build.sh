@@ -4,8 +4,6 @@ WORKDIR="$(dirname "$(realpath "$0")")"
 
 source "${WORKDIR}"/config
 
-# refresh MAKEOPTS
-
 function cleanbuild () {
     umount -l "${WORKDIR}/squashfs/var/tmp/portage" || true
     umount -l "${WORKDIR}/squashfs/mnt/gen-iso" || true
@@ -62,7 +60,7 @@ if [ -d "${WORKDIR}/squashfs/var/db/repos/gentoo" ];then
             fi
         else
             pushd "${WORKDIR}/squashfs/var/db/repos/gentoo" || exit 1
-	    if (git pull);then
+            if (git pull);then
                 popd || exit 1
                 break;
             else
