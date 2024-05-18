@@ -1,5 +1,6 @@
 app-admin/calamares
 app-admin/calamares-settings-gig
+app-admin/eclean-kernel
 app-admin/sudo
 app-editors/nano
 app-editors/vim
@@ -8,7 +9,6 @@ app-i18n/fcitx-chinese-addons
 app-i18n/fcitx-configtool
 app-portage/eix
 app-shells/bash-completion
-dev-libs/libisoburn
 dev-vcs/git
 kde-apps/dolphin
 kde-apps/konsole
@@ -19,8 +19,6 @@ sys-firmware/nvidia-firmware
 sys-fs/btrfs-progs
 sys-fs/cryptsetup
 sys-fs/dosfstools
-sys-fs/mtools
-sys-fs/squashfs-tools
 sys-kernel/gentoo-kernel-bin
 sys-kernel/linux-firmware
 sys-process/btop
