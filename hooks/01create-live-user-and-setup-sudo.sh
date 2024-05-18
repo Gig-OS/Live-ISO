@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # add live user with 'live' as password
+crun userdel -r live || true
 crun useradd -m -c LiveUser live 
 crun 'echo -e "live\nlive" | passwd live'
 crun 'echo -e "live\nlive" | passwd'
