@@ -42,4 +42,5 @@ vdpau
 device-mapper
 libzfs
 zfs
+cryptsetup
 "
