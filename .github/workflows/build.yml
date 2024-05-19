@@ -13,12 +13,17 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 10080
     steps:
+      - name: clean old files
+        run: |
+          sudo rm -rf squashfs stat
       - name: checkout
         uses: actions/checkout@v4
+        with:
+          submodules: 'true'
       - name: install deps
         run: |
           sudo apt update
-          sudo apt -y install wget xz-utils git rsync make squashfs-tools asciidoc
+          sudo apt -y install m4 wget xz-utils git rsync make squashfs-tools asciidoc
       - name: check hardware
         run: |
           lscpu

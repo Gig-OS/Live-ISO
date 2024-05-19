@@ -6,6 +6,7 @@
 * xz
 * git
 * make
+* m4
 * rsync
 * squashfs-tools with xz support
 * asciidoc (build arch-install-script)
