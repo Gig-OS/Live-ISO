@@ -4,7 +4,7 @@ WORKDIR="$(dirname "$(realpath "$0")")"
 
 source "${WORKDIR}"/config
 
-function cleanbuild () {
+function cleanmount () {
     umount -l "${WORKDIR}/squashfs/var/tmp/portage" || true
     umount -l "${WORKDIR}/squashfs/mnt/gen-iso" || true
     exit
@@ -124,7 +124,8 @@ function buildiso () {
 }
 
 # ctrl+c anytime to stop
-trap cleanbuild INT
+trap cleanmount INT
+trap cleanmount EXIT
 
 # must run as root
 if (( EUID != 0 ));then
@@ -183,3 +184,5 @@ buildbootfiles
 rsync -rl --copy-unsafe-links "${WORKDIR}"/include-iso/* "${WORKDIR}/iso" || true
 
 buildiso
+
+cleanmount
