@@ -106,7 +106,7 @@ function makesquashfs (){
 function buildbootfiles () {
     # make initramfs with live support
     KVER="$(ls "${WORKDIR}/squashfs/lib/modules" | sort -Vr | head -n1)"
-    crun dracut -f --kver "${KVER}" --add dmsquash-live --add dmsquash-live-autooverlay || exit 1
+    crun dracut -f --kver "${KVER}" --add dmsquash-live --add dmsquash-live-autooverlay --add crypt || exit 1
 
     # copy the kernel to iso workdir
     mkdir -p "${WORKDIR}/iso/boot"
