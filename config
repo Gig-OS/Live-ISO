@@ -1,7 +1,7 @@
 ARCH=amd64
 MICROARCH=amd64
 SUFFIX=desktop-systemd
-MIRROR="https://mirrors.ustc.edu.cn"
+MIRROR="https://ftp-osl.osuosl.org/pub"
 DIST="${MIRROR}/gentoo/releases/${ARCH}/autobuilds"
 #GITMIRROR="${MIRROR}/gentoo.git"
 GITMIRROR="https://github.com/gentoo-mirror/gentoo.git"
