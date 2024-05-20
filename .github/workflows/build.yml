@@ -14,15 +14,32 @@ jobs:
   build_iso:
     name: Build ISO
     runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/${{ github.run_id }}
     timeout-minutes: 10080
     steps:
-      - name: clean old files
-        run: |
-          sudo rm -rf squashfs stat iso *.iso *.md5
       - name: checkout
         uses: actions/checkout@v4
         with:
+          clean: 'false'
           submodules: 'true'
+          path: ${{ github.workspace }}/${{ github.run_id }}
+
+      - name: Generate release tag
+        id: generate_release_tag
+        uses: amitsingh-007/next-release-tag@v5.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_prefix: 'v'
+          tag_template: 'yyyy.mm.dd.i'
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.generate_release_tag.outputs.next_release_tag }}
+          generateReleaseNotes: true
+          makeLatest: true
+
       - name: install deps
         run: |
           sudo apt update
@@ -33,6 +50,7 @@ jobs:
       - name: create md5sum
         run: |
           for f in *.iso; do [ -e "$f" ] && md5sum "$f" > "${f}.md5"; done
+
       - name: upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -40,6 +58,14 @@ jobs:
           path: ./*.iso*
       - name: upload release
         uses: softprops/action-gh-release@v2
-        if: github.event_name == 'release'
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          with: ./*.iso*
+          files: ./*.iso*
+
+      - name: clean build dir
+        if: always()
+        run: |
+          sudo umount -l ${GITHUB_WORKSPACE}/squashfs/*/*/* || true
+          sudo umount -l ${GITHUB_WORKSPACE}/squashfs/*/* || true
+          sudo umount -l ${GITHUB_WORKSPACE}/squashfs/* || true
+          sudo rm -rf ${GITHUB_WORKSPACE}
