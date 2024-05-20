@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: clean old files
         run: |
-          sudo rm -rf squashfs stat *.iso *.md5
+          sudo rm -rf squashfs stat iso *.iso *.md5
       - name: checkout
         uses: actions/checkout@v4
         with:
