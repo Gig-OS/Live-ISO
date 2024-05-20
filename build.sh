@@ -100,7 +100,7 @@ function makesquashfs (){
     mkdir -p "${WORKDIR}/iso/LiveOS"
     rm -f "${WORKDIR}/iso/LiveOS/squashfs.img"
     mksquashfs "${WORKDIR}/squashfs/" "${WORKDIR}/iso/LiveOS/squashfs.img" \
-    -wildcards -ef exclude.txt -b 1024K -comp xz -progress -processors 4 -Xdict-size 100% || exit 1
+    -wildcards -ef exclude.txt -b 1024K -comp xz -progress -processors 8 -Xdict-size 100% || exit 1
 }
 
 function buildbootfiles () {
