@@ -159,15 +159,15 @@ cp --dereference /etc/resolv.conf "${WORKDIR}/squashfs"/etc/
 syncrepo
 
 # upgrade portage first
-crun emerge -vu1 portage
+crun emerge -vu1 --jobs 3 portage
 # we need git to sync overlay
 if ( ! crun which git);then
-    crun emerge -vu dev-vcs/git || exit 1
+    crun emerge -vu --jobs 3 dev-vcs/git || exit 1
 fi
 syncrepo
 # upgrade system
 crun emerge -uvDN --jobs 3 --keep-going @world || exit 1
-crun emerge @live-rebuild || exit 1
+crun emerge --jobs 3 @live-rebuild || exit 1
 crun emerge -c || exit 1
 crun eclean-kernel --no-bootloader-update --no-mount -n 1 || exit 1
 
