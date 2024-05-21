@@ -2,14 +2,9 @@ on:
   push:
     branches:
       - KDE
-  pull_request:
-    branches:
-      - KDE
   release:
     types:
       - published
-  schedule:
-  - cron: "0 0 * * 5"
 jobs:
   build_iso:
     name: Build ISO
@@ -25,20 +20,6 @@ jobs:
           clean: 'false'
           submodules: 'true'
           path: ${{ github.workspace }}/${{ github.run_id }}
-
-      - name: Generate release tag
-        id: generate_release_tag
-        uses: amitsingh-007/next-release-tag@v5.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag_prefix: 'v'
-          tag_template: 'yyyy.mm.dd.i'
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ steps.generate_release_tag.outputs.next_release_tag }}
-          generateReleaseNotes: true
-          makeLatest: true
 
       - name: install deps
         run: |
@@ -68,4 +49,5 @@ jobs:
           sudo umount -l ${GITHUB_WORKSPACE}/squashfs/*/*/* || true
           sudo umount -l ${GITHUB_WORKSPACE}/squashfs/*/* || true
           sudo umount -l ${GITHUB_WORKSPACE}/squashfs/* || true
-          sudo rm -rf ${GITHUB_WORKSPACE}
+          sudo rm -rf ${GITHUB_WORKSPACE}/squashfs
+          sudo rm -rf ${GITHUB_WORKSPACE}/iso
