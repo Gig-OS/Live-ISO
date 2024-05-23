@@ -1,0 +1,2 @@
+FEATURES="buildpkg getbinpkg"
+EMERGE_DEFAULT_OPTS="${EMERGE_DEFAULT_OPTS} --getbinpkg --buildpkg --buildpkg-exclude 'acct-*/* sys-kernel/*-sources virtual/*' "

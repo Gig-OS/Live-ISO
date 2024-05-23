@@ -170,6 +170,7 @@ crun emerge -uvDN --jobs 3 --keep-going @world || exit 1
 crun emerge --jobs 3 @live-rebuild || exit 1
 crun emerge -c || exit 1
 crun eclean-kernel --no-bootloader-update --no-mount -n 1 || exit 1
+crun eclean-pkg || true
 
 # run hooks in squashfs
 for hook in "${WORKDIR}"/hooks/*;do

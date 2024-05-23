@@ -11,31 +11,37 @@ jobs:
         working-directory: ${{ github.workspace }}/${{ github.run_id }}
     timeout-minutes: 10080
     steps:
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           clean: 'false'
           submodules: 'true'
           path: ${{ github.workspace }}/${{ github.run_id }}
-      - name: install deps
+
+      - name: Install deps
         run: |
           sudo apt update
           sudo apt -y install m4 wget xz-utils git rsync make squashfs-tools asciidoc
-      - name: build iso
+      - name: Mount binpkgs dir
+        run: |
+          sudo mkdir -p /var/cache/binpkgs/
+          sudo mkdir -p ${{ github.workspace }}/${{ github.run_id }}/squashfs/var/cache/binpkgs/
+          sudo mount -o bind /var/cache/binpkgs/ ${{ github.workspace }}/${{ github.run_id }}/squashfs/var/cache/binpkgs/
+      - name: Build iso
         run: |
           sudo bash -x ./build.sh
       - name: create md5sum
         run: |
           for f in *.iso; do [ -e "$f" ] && md5sum "$f" > "${f}.md5"; done
 
-      - name: upload artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ISO
           if-no-files-found: error
           path: |
-            ${{ github.workspace }}/*.iso
-            ${{ github.workspace }}/*.md5
+            ${{ github.workspace }}/${{ github.run_id }}/*.iso
+            ${{ github.workspace }}/${{ github.run_id }}/*.md5
 
       - name: Generate release tag
         id: generate_release_tag
@@ -51,10 +57,10 @@ jobs:
           generateReleaseNotes: true
           makeLatest: true
           artifacts: |
-            ${{ github.workspace }}/*.iso
-            ${{ github.workspace }}/*.md5
+            ${{ github.workspace }}/${{ github.run_id }}/*.iso
+            ${{ github.workspace }}/${{ github.run_id }}/*.md5
 
-      - name: clean build dir
+      - name: Clean build dir
         if: always()
         run: |
           sudo umount -l ${GITHUB_WORKSPACE}/squashfs/*/*/* || true
