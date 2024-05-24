@@ -4,7 +4,7 @@ on:
   - cron: "0 0 * * 5"
 jobs:
   create_release:
-    name: Create Release
+    name: Create Release ISO
     runs-on: self-hosted
     defaults:
       run:
@@ -18,23 +18,23 @@ jobs:
           submodules: 'true'
           path: ${{ github.workspace }}/${{ github.run_id }}
 
-      - name: Install deps
+      - name: Install Dependencies
         run: |
           sudo apt update
           sudo apt -y install m4 wget xz-utils git rsync make squashfs-tools asciidoc
-      - name: Mount binpkgs dir
+      - name: Mount Binpkgs Directory
         run: |
           sudo mkdir -p /var/cache/binpkgs/
           sudo mkdir -p ${{ github.workspace }}/${{ github.run_id }}/squashfs/var/cache/binpkgs/
           sudo mount -o bind /var/cache/binpkgs/ ${{ github.workspace }}/${{ github.run_id }}/squashfs/var/cache/binpkgs/
-      - name: Build iso
+      - name: Build ISO
         run: |
           sudo bash -x ./build.sh
       - name: create md5sum
         run: |
           for f in *.iso; do [ -e "$f" ] && md5sum "$f" > "${f}.md5"; done
 
-      - name: Upload artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ISO
@@ -43,7 +43,7 @@ jobs:
             ${{ github.workspace }}/${{ github.run_id }}/*.iso
             ${{ github.workspace }}/${{ github.run_id }}/*.md5
 
-      - name: Generate release tag
+      - name: Generate Release Tag
         id: generate_release_tag
         uses: amitsingh-007/next-release-tag@v5.0.0
         with:
@@ -60,11 +60,9 @@ jobs:
             ${{ github.workspace }}/${{ github.run_id }}/*.iso
             ${{ github.workspace }}/${{ github.run_id }}/*.md5
 
-      - name: Clean build dir
+      - name: Clean Build Directory
         if: always()
         run: |
-          sudo umount -l ${GITHUB_WORKSPACE}/squashfs/*/*/* || true
-          sudo umount -l ${GITHUB_WORKSPACE}/squashfs/*/* || true
-          sudo umount -l ${GITHUB_WORKSPACE}/squashfs/* || true
+          sudo umount -l $(grep ${GITHUB_WORKSPACE} /proc/mounts | cut -f2 -d" " | sort -r)
           sudo rm -rf ${GITHUB_WORKSPACE}/squashfs
           sudo rm -rf ${GITHUB_WORKSPACE}/iso
