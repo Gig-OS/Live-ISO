@@ -1,3 +1,7 @@
+# Download
+
+Please go to actions page and download the latest artifact.
+
 # Script dependencies
 
 * bash

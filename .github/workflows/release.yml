@@ -43,23 +43,6 @@ jobs:
             ${{ github.workspace }}/${{ github.run_id }}/*.iso
             ${{ github.workspace }}/${{ github.run_id }}/*.md5
 
-      - name: Generate Release Tag
-        id: generate_release_tag
-        uses: amitsingh-007/next-release-tag@v5.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag_prefix: 'v'
-          tag_template: 'yyyy.mm.dd.i'
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ steps.generate_release_tag.outputs.next_release_tag }}
-          generateReleaseNotes: true
-          makeLatest: true
-          artifacts: |
-            ${{ github.workspace }}/${{ github.run_id }}/*.iso
-            ${{ github.workspace }}/${{ github.run_id }}/*.md5
-
       - name: Clean Build Directory
         if: always()
         run: |
