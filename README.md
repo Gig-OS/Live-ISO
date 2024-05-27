@@ -1,6 +1,6 @@
 # Download
 
-Please go to actions page and download the latest artifact.
+Please go to [actions](https://github.com/Gig-OS/Live-ISO/actions) page and download the latest build's artifact.
 
 # Script dependencies
 
