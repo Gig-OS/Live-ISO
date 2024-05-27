@@ -22,15 +22,10 @@ jobs:
         run: |
           sudo apt update
           sudo apt -y install m4 wget xz-utils git rsync make squashfs-tools asciidoc
-      - name: Mount Binpkgs Directory
-        run: |
-          sudo mkdir -p /var/cache/binpkgs/
-          sudo mkdir -p ${{ github.workspace }}/${{ github.run_id }}/squashfs/var/cache/binpkgs/
-          sudo mount -o bind /var/cache/binpkgs/ ${{ github.workspace }}/${{ github.run_id }}/squashfs/var/cache/binpkgs/
       - name: Build ISO
         run: |
           sudo bash -x ./build.sh
-      - name: create md5sum
+      - name: Create md5sum
         run: |
           for f in *.iso; do [ -e "$f" ] && md5sum "$f" > "${f}.md5"; done
 
