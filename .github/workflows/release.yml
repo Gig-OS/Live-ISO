@@ -41,6 +41,6 @@ jobs:
       - name: Clean Build Directory
         if: always()
         run: |
-          sudo umount -l $(grep ${GITHUB_WORKSPACE} /proc/mounts | cut -f2 -d" " | sort -r)
+          sudo umount -l $(grep ${GITHUB_WORKSPACE} /proc/mounts | cut -f2 -d" " | sort -r) || true
           sudo rm -rf ${GITHUB_WORKSPACE}/squashfs
           sudo rm -rf ${GITHUB_WORKSPACE}/iso
