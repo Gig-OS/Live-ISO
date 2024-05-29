@@ -41,4 +41,5 @@ extra
 vdpau
 device-mapper
 cryptsetup
+libei
 "

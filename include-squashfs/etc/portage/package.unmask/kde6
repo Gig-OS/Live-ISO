@@ -3,6 +3,7 @@ kde-plasma/*
 kde-apps/*
 kde-misc/*
 
+x11-misc/sddm
 www-client/falkon
 app-accessibility/kontrast
 media-gfx/skanpage
