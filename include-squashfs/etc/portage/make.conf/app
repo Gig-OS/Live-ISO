@@ -1,5 +1,5 @@
 GRUB_PLATFORMS="efi-64 multiboot pc"
-L10N="en zh-CN"
+L10N="en-US zh-CN"
 VIDEO_CARDS="intel i965 amdgpu radeon radeonsi nouveau vesa virgl"
 LLVM_TARGETS="X86 BPF WebAssembly"
 
