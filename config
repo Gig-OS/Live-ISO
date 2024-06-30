@@ -1,10 +1,10 @@
 ARCH=amd64
 MICROARCH=amd64
 SUFFIX=desktop-systemd
-MIRROR="https://ftp-osl.osuosl.org/pub"
+MIRROR="https://mirrors.ustc.edu.cn/"
 DIST="${MIRROR}/gentoo/releases/${ARCH}/autobuilds"
 #GITMIRROR="${MIRROR}/gentoo.git"
 GITMIRROR="https://github.com/gentoo-mirror/gentoo.git"
-CORES="12"
-TMPFS="30G"
+CORES="36"
+TMPFS="74G"
 MAKEOPTS="-j${CORES}"
