@@ -162,7 +162,7 @@ syncrepo
 crun emerge -vu1 --jobs 3 portage
 # we need git to sync overlay
 if ( ! crun which git);then
-    crun emerge -vu --jobs 3 dev-vcs/git || exit 1
+    crun emerge -vuD --jobs 3 dev-vcs/git || exit 1
 fi
 syncrepo
 # upgrade system
