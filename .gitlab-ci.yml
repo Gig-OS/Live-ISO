@@ -1,0 +1,16 @@
+before_script:
+  - apt update
+  - apt -y install m4 wget xz-utils git rsync make squashfs-tools asciidoc
+
+stages:
+  - build
+
+run-build:
+  stage: build
+  script:
+    - bash -x ./build.sh
+    - for f in *.iso; do [ -e "$f" ] && md5sum "$f" > "${f}.md5"; done
+  artifacts:
+    paths:
+      - ./*.iso
+      - ./*.md5
