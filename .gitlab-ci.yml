@@ -7,6 +7,7 @@ stages:
 
 run-build:
   stage: build
+  timeout: 2d
   script:
     - bash -x ./build.sh
     - for f in *.iso; do [ -e "$f" ] && md5sum "$f" > "${f}.md5"; done
