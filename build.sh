@@ -83,6 +83,14 @@ else
 fi
 }
 
+function refreshconfig() {
+    # refresh MAKEOPTS
+    sed -i "s/MAKEOPTS=\".*\"/MAKEOPTS=\""${MAKEOPTS}"\"/g" "${WORKDIR}/squashfs/etc/portage/make.conf/common"
+
+    # refresh MIRROR
+    echo "GENTOO_MIRRORS=\""${MIRROR}"/gentoo\"" > "${WORKDIR}/squashfs/etc/portage/make.conf/mirror"
+}
+
 function mounttmpfs () {
     # init notmpfs dir
     crun mkdir -p /var/tmp/{notmpfs,portage}
@@ -142,15 +150,10 @@ unpackstage3
 
 buildarchscript
 
-# copy extra staff for squashfs
-rsync -rl --copy-unsafe-links "${WORKDIR}"/include-squashfs/* "${WORKDIR}/squashfs/"
+# copy extra staff to squashfs but package.use
+rsync -rl --copy-unsafe-links "${WORKDIR}"/include-squashfs/* "${WORKDIR}/squashfs/" --exclude etc/portage/package.use/ --exclude etc/portage/make.conf/use
 
-# refresh MAKEOPTS
-sed -i "s/MAKEOPTS=\".*\"/MAKEOPTS=\""${MAKEOPTS}"\"/g" "${WORKDIR}/squashfs/etc/portage/make.conf/common"
-
-# refresh MIRROR
-echo "GENTOO_MIRRORS=\""${MIRROR}"/gentoo\"" > "${WORKDIR}/squashfs/etc/portage/make.conf/mirror"
-
+refreshconfig
 mounttmpfs
 
 # DNS
@@ -159,15 +162,18 @@ cp --dereference /etc/resolv.conf "${WORKDIR}/squashfs"/etc/
 syncrepo
 
 # upgrade portage first
-crun emerge -vu1 --jobs 3 portage
+crun emerge -vu1 --jobs "${CORES}" portage
 # we need git to sync overlay
 if ( ! crun which git);then
-    crun emerge -vuD --jobs 3 dev-vcs/git || exit 1
+    crun emerge -vuD --jobs "${CORES}" dev-vcs/git || exit 1
 fi
 syncrepo
+
+refreshconfig
+
 # upgrade system
-crun emerge -uvDN --jobs 3 --keep-going @world || exit 1
-crun emerge --jobs 3 @live-rebuild || exit 1
+crun emerge -uvDN --jobs "${CORES}" --keep-going @world || exit 1
+crun emerge --jobs "${CORES}" @live-rebuild || exit 1
 crun emerge -c || exit 1
 crun eclean-kernel --no-bootloader-update --no-mount -n 1 || exit 1
 crun eclean-pkg || true
