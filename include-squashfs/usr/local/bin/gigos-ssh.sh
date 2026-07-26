@@ -1,5 +1,5 @@
 #!/bin/bash
-# 桌面「启动 SSH」按钮的 root 后端（经 pkexec 调用）。用法: gigos-ssh.sh password|keyonly
+# 桌面启动 SSH按钮的 root 后端（经 pkexec 调用）。用法: gigos-ssh.sh password|keyonly
 # 背景:live 默认不开 sshd;且 /etc/ssh/sshd_config.d/9999999gentoo.conf 设 PasswordAuthentication no
 # （仅密钥）。本脚本按需开启 sshd,密码登录用一个排在它【之前】的 drop-in 覆盖(sshd 首个匹配生效)。
 set -e

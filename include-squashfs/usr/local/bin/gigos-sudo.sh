@@ -1,5 +1,5 @@
 #!/bin/bash
-# 桌面「开启 sudo 免密」按钮的 root 后端（经 pkexec 调用）。用法: gigos-sudo.sh on|off
+# 桌面上的开启 sudo 免密按钮的 root 后端（经 pkexec 调用）。用法: gigos-sudo.sh on|off
 # 给 live 用户开/关 sudo 免密码(NOPASSWD)。仅 live 调试方便;装好的系统由 calamares 删此 drop-in
 # (恢复 sudo 需密码,安全)。
 set -e

@@ -8,7 +8,7 @@
 # 支持的 gigos.lang 值:zh_CN(默认) / zh_TW / en_US
 # KDE 的系统 locale 与 Plasma UI 语言是两套:plasma-localerc 的 [Translations]LANGUAGE 管
 # 界面语言、[Formats]LANG 管区域格式【且被 Plasma 会话导出为 LANG】,两者都要按所选语言设,
-# 否则会「界面英文但会话 LANG=zh_CN → Firefox 等非 KDE 程序仍跟着变中文」(实机踩过)。
+# 否则界面是英文但会话 `LANG=zh_CN`,Firefox 等非 KDE 程序仍会显示中文。
 
 set -u
 
