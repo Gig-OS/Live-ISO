@@ -281,9 +281,35 @@ else
     exit 1
 fi
 
+# [gigos][zfs] zfs-kmod 从源码编需 /usr/src/linux 指向 dist-kernel 构建树(.config/Module.symvers +
+# /lib/modules/<ver>/build),这些符号链接由 gentoo-kernel-bin 的 pkg_postinst 建。在单次 @world 事务里
+# zfs 的 pkg_setup 可能早于内核 postinst 跑 →「kernel needs to be rebuilt」失败(nvidia 走 binpkg、
+# MERGE_TYPE=binary 跳过内核检查故无事)。解法:先单独 emerge gentoo-kernel-bin(postinst 立刻建好链接)、
+# eselect kernel set 锁定 /usr/src/linux,之后 @world 里的 sys-fs/zfs 方能编过。
+crun emerge -vu1q --jobs "${CORES}" sys-kernel/gentoo-kernel-bin || exit 1
+crun eselect kernel set 1 || true
+# objtool 可用性:gentoo-kernel-bin 自带的 objtool 动态链接 libelf + binutils-libs(libbfd,内核 ≥6.19);
+# 新 chroot 里 binutils-libs 可能缺(它只是 kernel-build 的 BDEPEND、非 -bin 的 RDEPEND)→ objtool 退 127
+# → linux-mod-r1 _modules_sanity_objtool 判「kernel needs to be rebuilt」使 zfs-kmod 编译失败(bug 732210)。
+crun emerge -q --noreplace virtual/libelf sys-libs/binutils-libs || exit 1
+# 早失败探针:objtool 仍退 127(缺 .so)立刻中止,别烧 2h 才在 zfs 处炸。
+crun sh -c 'O=/usr/src/linux/tools/objtool/objtool; if [ -e "$O" ]; then "$O" >/dev/null 2>&1; [ $? -eq 127 ] && { echo "[gigos] FATAL: objtool 退 127(缺 .so),zfs-kmod 将失败"; ldd "$O"; exit 1; }; fi; echo "[gigos] objtool 可用"' || exit 1
+
 # upgrade system
 retry crun CONFIG_PROTECT="-*" emerge -uvDNq --jobs "${CORES}" --keep-going --autounmask-continue --autounmask-keep-masks=y @world || exit 1
 crun emerge --jobs "${CORES}" @live-rebuild || exit 1
+
+# [gigos] ZFS 根装机就绪性自检(非致命:--keep-going 可能合理跳过 sys-boot/zfsbootmenu;真正的把关在
+# 99-sanitize 的 ZBM 契约断言)。这里只在构建日志里早早标记一个会在装机时炸的 ZFS 根路径。
+if [ -x "${WORKDIR}/squashfs/usr/bin/generate-zbm" ] || [ -x "${WORKDIR}/squashfs/usr/sbin/generate-zbm" ]; then
+    if [ ! -f "${WORKDIR}/squashfs/usr/lib/systemd/boot/efi/linuxx64.efi.stub" ]; then
+        echo "[gigos] 警告:装了 zfsbootmenu 但缺 systemd EFI stub(linuxx64.efi.stub)→ 装机时 generate-zbm 产不出单文件 EFI;确认 sys-apps/systemd 开了 boot USE(见 package.use/zfs)"
+    else
+        echo "[gigos] ZFS 根就绪:generate-zbm + systemd EFI stub 均在位"
+    fi
+else
+    echo "[gigos] 警告:squashfs 内无 generate-zbm(sys-boot/zfsbootmenu 未装,可能 --keep-going 跳过)→ ZFS 根安装将不可启动(非 ZFS 安装不受影响)"
+fi
 crun emerge -c || exit 1
 crun eclean-kernel --no-bootloader-update --no-mount -n 1 || exit 1
 crun eclean-pkg || true

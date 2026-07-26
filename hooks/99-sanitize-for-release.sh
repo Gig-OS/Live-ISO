@@ -91,4 +91,29 @@ done
 grep -qE '^[[:space:]]*-[[:space:]]*shellprocess[[:space:]]*$' "${CSGSET}" 2>/dev/null || { echo "[99-sanitize] 致命:calamares settings.conf 未启用 shellprocess 清理步骤(清理不会跑)→ 中止"; exit 1; }
 echo "[99-sanitize] 安全断言通过:装机清理契约已接(autologin / SSH 密码登录 / polkit 残留会被 calamares 删除)"
 
+# ⑧ ZFS 根装机契约断言。仅当本锅【确实装上了 ZBM 工具】(generate-zbm 在 squashfs 内)才强校验——
+#    这样 --keep-going 下若 guru 偶发使 zfsbootmenu 被跳过,非 ZFS 盘照常出;但凡装了 ZBM,就必须保证
+#    装机后处理脚本在位、settings 已接 shellprocess@zfs、且 ZBM config 启用了单文件 EFI,否则 ZFS 根装出
+#    不可启动盘。任一缺失即中止。
+SQROOT="${WORKDIR}/squashfs"
+if [ -x "${SQROOT}/usr/bin/generate-zbm" ] || [ -x "${SQROOT}/usr/sbin/generate-zbm" ]; then
+    test -x "${SQROOT}/usr/local/bin/gigos-zfs-bootmenu.sh" \
+        || { echo "[99-sanitize] 致命:装了 ZBM 却缺 gigos-zfs-bootmenu.sh → ZFS 根装机无引导器,中止"; exit 1; }
+    grep -qE '^[[:space:]]*-[[:space:]]*shellprocess@zfs[[:space:]]*$' "${CSGSET}" 2>/dev/null \
+        || { echo "[99-sanitize] 致命:settings.conf 未接 shellprocess@zfs → ZFS 根装机不会装 ZBM,中止"; exit 1; }
+    # shellprocess@zfs 必须接在 bootloader 之后(否则 GRUB 的 fallback EFI 会盖过 ZBM)
+    awk '/^[[:space:]]*-[[:space:]]*bootloader[[:space:]]*$/{b=NR} /^[[:space:]]*-[[:space:]]*shellprocess@zfs[[:space:]]*$/{z=NR} END{exit !(b&&z&&z>b)}' "${CSGSET}" \
+        || { echo "[99-sanitize] 致命:settings.conf 中 shellprocess@zfs 未排在 bootloader 之后 → GRUB fallback 会盖过 ZBM,中止"; exit 1; }
+    test -f "${SQROOT}/etc/zfsbootmenu/config.yaml" \
+        || { echo "[99-sanitize] 致命:缺 /etc/zfsbootmenu/config.yaml → generate-zbm 无法产单文件 EFI,中止"; exit 1; }
+    grep -qE '^[[:space:]]*Enabled:[[:space:]]*true' "${SQROOT}/etc/zfsbootmenu/config.yaml" \
+        || { echo "[99-sanitize] 致命:zfsbootmenu config.yaml 未启用 EFI(EFI.Enabled:true)→ 不出单文件 EFI,中止"; exit 1; }
+    # EFI stub 必须随 systemd[boot] 安装,否则 generate-zbm 装机时产不出单文件 EFI
+    test -f "${SQROOT}/usr/lib/systemd/boot/efi/linuxx64.efi.stub" \
+        || echo "[99-sanitize] 警告:未见 systemd EFI stub(linuxx64.efi.stub)→ 确认 sys-apps/systemd 开了 boot USE,否则装机时 generate-zbm 产不出 EFI"
+    echo "[99-sanitize] 安全断言通过:ZFS 根装机契约已接(ZBM 工具/脚本/序列/config 齐备,shellprocess@zfs 在 bootloader 之后)"
+else
+    echo "[99-sanitize] 提示:本锅未含 generate-zbm(zfsbootmenu 未装,可能 --keep-going 跳过)→ 跳过 ZFS 根装机断言;ZFS 根安装将不可启动,非 ZFS 安装不受影响"
+fi
+
 echo "[99-sanitize] 出厂清理完成：MAKEOPTS 自适应、CPU_FLAGS 按用户机生成、镜像源设为阿里云、解除 nouveau 静态黑名单、构建调优与缓存已移除"

@@ -53,3 +53,8 @@ chmod 0755 "${WORKDIR}/squashfs/etc/skel/Desktop/gigos-nosleep.desktop"
 # 装好的系统由 calamares 删 drop-in/按钮,sudo 恢复需密码)
 chmod +x "${WORKDIR}/squashfs/usr/local/bin/gigos-sudo.sh" "${WORKDIR}/squashfs/usr/local/bin/gigos-sudo-button.sh"
 chmod 0755 "${WORKDIR}/squashfs/etc/skel/Desktop/gigos-sudo-nopasswd.desktop"
+
+# ZFS 根装机处理脚本(由 calamares shellprocess@zfspre / @zfs 在目标 chroot 内调用)设可执行。
+# 注:这【不】是 live systemd 服务(无 systemctl enable),仅装机时被 Calamares 调用,同 gigos-fix-crypttab.sh。
+chmod +x "${WORKDIR}/squashfs/usr/local/bin/gigos-zfs-bootmenu.sh"
+chmod +x "${WORKDIR}/squashfs/usr/local/bin/gigos-zfs-prebootloader.sh"

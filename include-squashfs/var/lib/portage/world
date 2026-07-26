@@ -46,6 +46,17 @@ sys-fs/lvm2
 sys-block/gparted
 sys-block/parted
 sys-fs/mdadm
+# 手动 ZFS:zpool/zfs 工具 + 内核模块,供进阶用户在终端手动建池/导入(Calamares 不提供 ZFS 装机)。
+# [dist-kernel](见 package.use/zfs)让 zfs-kmod 随 gentoo-kernel-bin 自动重建。
+# 注意:每周构建成败因此与 zfs⇄内核兼容性绑定;--keep-going 下若 zfs 编不过则本锅跳过 zfs(其余照出)。
+sys-fs/zfs
+# ZFSBootMenu(guru overlay,已在 repos.conf 启用):ZFS 根安装的 UEFI 引导器(GRUB 读不了带新特性/
+# 原生加密的 ZFS 池,故 ZFS 根改用 ZBM;ext4/xfs/btrfs/LUKS 仍用 GRUB)。注意:guru 的该包【不】预装
+# *.EFI——只装 perl 脚本 + generate-zbm;单文件 UEFI EFI 由装机后处理(shellprocess@zfs)在目标里
+# 调 generate-zbm 现场生成(需 EFI stub,见 package.use/zfs 的 sys-apps/systemd boot)。
+# 同 sys-fs/zfs 在 --keep-going 下 emerge,guru 偶发坏不致整锅失败(非 ZFS 安装不受影响);
+# 但出锅前 99-sanitize 会断言「ZBM 在位 + settings 已接 shellprocess@zfs」,防静默出不可启动 ZFS 盘。
+sys-boot/zfsbootmenu
 # 硬件诊断:inxi 一条命令出完整硬件/驱动报告;usbutils 提供 lsusb
 sys-apps/inxi
 sys-apps/usbutils
