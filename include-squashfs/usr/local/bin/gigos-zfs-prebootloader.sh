@@ -6,7 +6,7 @@
 # ZFS 池(尤其原生加密)→ grub-install 退 1 → bootloader 模块失败 → Calamares 致命中止,
 # 装机后处理(shellprocess@zfs,装 ZFSBootMenu)根本轮不到跑(实测就卡在这:安装失败/启动加载器安装出错)。
 # 解法:本步把 grub-install / grub-mkconfig 临时换成 no-op(原件挪到 *.gigos-real),让 grubcfg/bootloader
-# 模块「成功」地空跑过;真正的引导器(ZFSBootMenu)由其后的 shellprocess@zfs 安装,并把这两个工具还原。
+# 模块以成功状态空跑过;真正的引导器(ZFSBootMenu)由其后的 shellprocess@zfs 安装,并把这两个工具还原。
 # 非 ZFS 安装:探针直接退出,grub 照常安装,完全不受影响。
 set -u
 # 一次性安装器助手,任何退出路径都自删,不残留进装好系统

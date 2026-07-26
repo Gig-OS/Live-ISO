@@ -41,10 +41,10 @@ rm -f "${PRT}/package.use/zz-autounmask" "${PRT}/package.accept_keywords/zz-auto
 #    make.conf 会原样成为用户系统的配置。若保留构建机的 CPU_FLAGS_X86
 #    （如含 avx2），用户 CPU 若不支持，后续 emerge 编译出的包会在运行时
 #    SIGILL 崩溃,这正是"第三方 live 装完不兼容/损坏系统"的典型成因。
-#    出厂策略改为「带标记的安全基线 + 开机自适应服务」:cpuflags 写 x86-64-v3 基线并加
+#    出厂策略改为带标记的安全基线加开机自适应服务:cpuflags 写 x86-64-v3 基线并加
 #    gigos-auto-cpuflags 标记,gigos-cpuflags.service 在 live 与装好的系统【每次启动】按
 #    真机 CPU(cpuid2cpuflags,见 world)覆盖之(用户删标记即停)。比旧的"手动占位"开箱即用。
-#    这里先清掉其它文件里可能残留的 CPU_FLAGS_X86,再把 cpuflags 归一成「标记+基线」
+#    这里先清掉其它文件里可能残留的 CPU_FLAGS_X86,再把 cpuflags 归一成标记加基线
 #    (与 include-squashfs 的同名文件一致,幂等)。
 for f in "${MC}"/common "${MC}"/cpuflags.conf; do
     [ -f "$f" ] && sed -i '/^CPU_FLAGS_X86=/d' "$f"
@@ -58,7 +58,7 @@ CPUF
 
 # 4. 出厂 GENTOO_MIRRORS：写带标记的【基线】(中国大陆)。开机后 gigos-mirror.service 按系统语言
 #    自动选就近镜像(简→大陆 / 繁→台港 / 英→全球),我们支持简/繁/英三语,写死单一中国镜像对
-#    繁体、海外用户不友好,故改成「基线 + 按语言自适应」,与 gigos-cpuflags 同套机制。
+#    繁体、海外用户不友好,故改成基线加按语言自适应,与 gigos-cpuflags 同套机制。
 #    第一行的标记让 gigos-mirror 知道这是自动值、可覆盖;用户删掉标记即固定为自己的值。
 #    注意：这与【构建时】用的源无关,构建机在香港直连官方源(见 build-and-deploy.sh / config)。
 {
@@ -69,8 +69,8 @@ CPUF
 
 # 5. 解除 nvidia.conf 对 nouveau 的【静态】黑名单,让双驱动共存。
 #    nvidia-drivers ebuild 自带 /etc/modprobe.d/nvidia.conf,首行 `blacklist nouveau`
-#    会让整个系统(含 live)永远走不了 nouveau,这跟我们「grub 默认 nouveau、
-#    选闭源项才上 nvidia」的双驱动设计直接冲突(选默认项 nouveau 也起不来)。
+#    会让整个系统(含 live)永远走不了 nouveau,这跟我们grub 默认 nouveau、
+#    选闭源项才上 nvidia的双驱动设计直接冲突(选默认项 nouveau 也起不来)。
 #    出厂注释掉这两行(ebuild 文件里明说可注释),改由 grub 内核参数动态切换:
 #      - 默认/nouveau 项:无 blacklist → nouveau 加载
 #      - 闭源 NVIDIA 项:cmdline modprobe.blacklist=nouveau → nvidia 接管
@@ -88,7 +88,7 @@ done
 
 # 7. 安全断言:装机后清理 live 残留(autologin / SSH 密码登录 / 桌面调试按钮 / polkit 免密)全靠
 #    calamares-settings-gig 的 shellprocess。打包前在此强校验契约确已接通,否则一旦指向 fork 失败
-#    或被上游覆盖,会出「装好的系统残留 autologin / SSH 密码登录」的后门盘。任一缺失即中止,不出后门盘。
+#    或被上游覆盖,会出装好后仍残留 autologin 与 SSH 密码登录的后门盘。任一缺失即中止,不出后门盘。
 CSGSP="${WORKDIR}/squashfs/etc/calamares/modules/shellprocess.conf"
 CSGSET="${WORKDIR}/squashfs/etc/calamares/settings.conf"
 for pat in "sddm.conf.d/kde_settings.conf" "49-calamares-nopasswd.rules" "00-gigos-passwordlogin.conf" "gigos-nosleep.desktop" "gigos-sudo-nopasswd.desktop"; do
@@ -99,14 +99,14 @@ echo "[99-sanitize] 安全断言通过:装机清理契约已接(autologin / SSH 
 
 # 7.5 settings.conf 排的每个模块,calamares 里都得真有。calamares 大版本会增删模块(3.3→3.4 就换过一轮),
 #      而 settings 是我们 fork 自己维护的:一旦排了个新版没有的模块,构建期一切正常、装机跑到那步才炸。
-#      这里在出锅前静态比对「settings.conf 的 sequence」vs「已装的 calamares 模块目录」,不匹配就中止。
+#      这里在出锅前静态比对 `settings.conf` 的 sequence 与已装的 calamares 模块目录,不匹配就中止。
 CALMODDIR=""
 for d in "${WORKDIR}/squashfs"/usr/lib64/calamares/modules "${WORKDIR}/squashfs"/usr/lib/calamares/modules; do
     [ -d "${d}" ] && { CALMODDIR="${d}"; break; }
 done
 if [ -f "${CSGSET}" ] && [ -n "${CALMODDIR}" ]; then
     MISSMOD=""
-    # 只取 sequence 段里形如「- 模块名」的整行(排除 instances 段的「- id: xxx」,那种带冒号);
+    # 只取 sequence 段里形如 `- 模块名` 的整行(排除 instances 段的 `- id: xxx`,那种带冒号);
     # shellprocess@nvidia 这类实例回落到基础模块名。
     for m in $(sed -n '/^sequence:/,/^[a-z]/p' "${CSGSET}" 2>/dev/null \
                | grep -oE '^[[:space:]]*-[[:space:]]*[a-z0-9@_.-]+[[:space:]]*$' \

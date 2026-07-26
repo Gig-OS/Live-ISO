@@ -231,7 +231,7 @@ mounttmpfs
 # 从没生成过。构建期 btrfs-progs 的 man 走 sphinx(python),按 LANG 调 setlocale('') 读到未生成的
 # zh_CN.UTF-8 → locale.Error、man 编译失败(实机卡在 btrfs-progs 并连累依赖它的 calamares-settings-gig)。
 # 直接用 localedef 生成需要的两个真 locale(不走 locale-gen:它会强行把内建的 C.UTF-8 也算进去,而纯
-# stage3 里 C.UTF-8 编不出 → 「not all compiled」中止整锅;C.UTF-8 是内建 locale,本就无需生成)。
+# stage3 里 C.UTF-8 编不出 → `not all compiled`中止整锅;C.UTF-8 是内建 locale,本就无需生成)。
 # localedef 遇字符集告警也可能返回非零,故不看退出码,改断言 zh_CN 真生成出来了(它才是构建 LANG 依赖的)。
 # 三语 ISO=简/繁/英,三个都要真编进 locale-archive(verify-iso.sh 硬查 zh_CN.utf8 + zh_TW.utf8;
 # 少了中文会回退 C)。glibc 自己的 postinst locale-gen 在纯 stage3 里会 abort(见上),故这里自己 localedef。
@@ -347,14 +347,14 @@ fi
 
 # [gigos][zfs] zfs-kmod 从源码编需 /usr/src/linux 指向 dist-kernel 构建树(.config/Module.symvers +
 # /lib/modules/<ver>/build),这些符号链接由 gentoo-kernel-bin 的 pkg_postinst 建。在单次 @world 事务里
-# zfs 的 pkg_setup 可能早于内核 postinst 跑 →「kernel needs to be rebuilt」失败(nvidia 走 binpkg、
+# zfs 的 pkg_setup 可能早于内核 postinst 跑 →`kernel needs to be rebuilt`失败(nvidia 走 binpkg、
 # MERGE_TYPE=binary 跳过内核检查故无事)。解法:先单独 emerge gentoo-kernel-bin(postinst 立刻建好链接)、
 # eselect kernel set 锁定 /usr/src/linux,之后 @world 里的 sys-fs/zfs 方能编过。
 retry crun emerge -vu1q --jobs "${CORES}" sys-kernel/gentoo-kernel-bin || exit 1
 crun eselect kernel set 1 || true
 # objtool 可用性:gentoo-kernel-bin 自带的 objtool 动态链接 libelf + binutils-libs(libbfd,内核 ≥6.19);
 # 新 chroot 里 binutils-libs 可能缺(它只是 kernel-build 的 BDEPEND、非 -bin 的 RDEPEND)→ objtool 退 127
-# → linux-mod-r1 _modules_sanity_objtool 判「kernel needs to be rebuilt」使 zfs-kmod 编译失败(bug 732210)。
+# → linux-mod-r1 _modules_sanity_objtool 判`kernel needs to be rebuilt`使 zfs-kmod 编译失败(bug 732210)。
 crun emerge -q --noreplace virtual/libelf sys-libs/binutils-libs || exit 1
 # 早失败探针:objtool 仍退 127(缺 .so)立刻中止,别烧 2h 才在 zfs 处炸。
 crun sh -c 'O=/usr/src/linux/tools/objtool/objtool; if [ -e "$O" ]; then "$O" >/dev/null 2>&1; [ $? -eq 127 ] && { echo "[gigos] FATAL: objtool 退 127(缺 .so),zfs-kmod 将失败"; ldd "$O"; exit 1; }; fi; echo "[gigos] objtool 可用"' || exit 1

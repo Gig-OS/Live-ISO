@@ -6,7 +6,7 @@
 #   GRUB 拒读 → 装好的系统开不了机。决策(多发行版调研后已定):ZFS 根一律走 ZFSBootMenu,
 #   ext4/xfs/btrfs/LUKS 仍走 GRUB。settings.conf 里 grubcfg/bootloader 仍在序列(为非 ZFS 安装),
 #   但本步【接在 bootloader 之后】:ZFS 根时主动拆掉 GRUB 在 ESP/NVRAM 留下的引导物、再装 ZBM,
-#   保证最终固件跑的是 ZBM 而非读不了池的 GRUB(见下「拆 GRUB」段,修复 fallback 互踩)。
+#   保证最终固件跑的是 ZBM 而非读不了池的 GRUB(见下面拆除 GRUB 的段落,修复 fallback 互踩)。
 #
 # 整体顺序(被 Calamares 调用时,前置模块已完成):partition 写 zfsInfo → zfs(ZfsJob)建池/数据集
 #   并在 live 跑 zgenhostid → unpackfs 解包 → mount 以 -R 重导入池(+加密时 load-key)→ fstab(跳过 zfs)→
@@ -16,7 +16,7 @@
 # 本脚本干官方 Calamares 模块做不了的事,每件都对应一个 ZFS 开机失败坑:
 #   1. hostid:zpool 记住建池时的 hostid;目标必须用同一 hostid 才能 import。zfshostid 已拷 hostid,
 #      仍显式校验/补建,并把 /etc/hostid 注入目标 initramfs(dracut install_items),否则首启 import 失败。
-#   2. 首启导入靠 hostid + import-scan(不烘焙可能受 altroot 污染的 zpool.cache;见下「cache」段)。
+#   2. 首启导入靠 hostid + import-scan(不烘焙可能受 altroot 污染的 zpool.cache;见下面关于 cache 的段落)。
 #   3. 原生加密:把根改成 keyfile 解锁(keyfile 只进【目标 initramfs】,不进 ZBM),并让 ZBM 仍在菜单
 #      处提示一次口令(keysource),避免 ZBM 解锁后目标 initramfs 再问一次的双重提示。
 #   4. ZFSBootMenu EFI:用 generate-zbm 生成单文件 UEFI 可执行、装进 ESP、efibootmgr 建项、置 bootfs。

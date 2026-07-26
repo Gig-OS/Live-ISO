@@ -3,7 +3,7 @@
 # 把 /etc/os-release 里的几个 URL 指向 Gentoo 中文社区。
 #
 # 为什么必须改:Calamares 的 branding.desc 用 ${SUPPORT_URL} / ${BUG_REPORT_URL} 取值,而 live 用的是
-# Gentoo 官方 os-release,于是欢迎页「支持信息」指向 gentoo.org/support、「已知问题」指向 bugs.gentoo.org
+# Gentoo 官方 os-release,于是欢迎页的支持信息按钮指向 gentoo.org/support、已知问题按钮指向 bugs.gentoo.org
 # 本 ISO 的问题会被报到上游,我们收不到,上游也无法受理。
 #
 # baselayout 把 /etc/os-release 做成指向 ../usr/lib/os-release 的软链;按 os-release 规范,/etc 下的
