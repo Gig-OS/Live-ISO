@@ -1,6 +1,6 @@
 # Download
 
-Please go to [mirror.gentoozh.org](https://mirror.gentoozh.org/) and download the latest build (a file named `gig-os-DATE.iso`).
+Please go to [iso.gentoozh.org](https://iso.gentoozh.org/) and download the latest build (a file named `gig-os-DATE.iso`).
 
 # Script dependencies
 
