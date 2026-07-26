@@ -1,0 +1,14 @@
+# 滚动树 python 3.13→3.14 过渡:官方 stage3 desktop-systemd 种子仍带 python3_13。@world 把 @system 的
+# 一串构建后端(portage[rsync-verify]→gemato→requests→charset-normalizer[native-extensions]→mypy/maturin)
+# 拉去同时供 3_13+3_14,可这几个的 3_13 目标默认没开,portage 的 autounmask 回溯收敛不了这条深级联
+#(--autounmask-backtrack=y + --backtrack=300 都试过仍早退),故在此显式给足 USE,让 @world 一次解出。
+# 这几个包都支持 3_14、无 3_13-only 死结,纯属种子迁移期的桥接。官方种子去掉 3.13 后此文件整份可删。
+>=dev-python/setuptools-83.0.0 python_targets_python3_13
+>=dev-python/setuptools-scm-10.2.0 python_targets_python3_13
+>=dev-python/mypy-2.2.0 python_targets_python3_13
+>=dev-python/charset-normalizer-3.4.8 python_targets_python3_13
+>=dev-python/ast-serialize-0.6.0 python_targets_python3_13
+>=dev-python/librt-0.12.0 python_targets_python3_13
+>=dev-python/typing-extensions-4.16.0 python_targets_python3_13
+>=dev-python/vcs-versioning-2.2.2 python_targets_python3_13
+>=dev-util/maturin-1.14.1 python_targets_python3_13
