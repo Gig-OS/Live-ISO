@@ -1,0 +1,13 @@
+[Unit]
+Description=按 grub 选择常规加载 nvidia 闭源驱动（live，非 early KMS）
+ConditionKernelCommandLine=gigos.gpu=nvidia
+After=systemd-udevd.service
+Before=display-manager.service sddm.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/gigos-nvidia-load.sh
+
+[Install]
+WantedBy=multi-user.target

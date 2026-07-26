@@ -1,14 +1,17 @@
 app-admin/calamares
 app-admin/calamares-settings-gig
 app-admin/eclean-kernel
-x11-drivers/nvidia-drivers
 app-admin/sudo
 app-editors/nano
 app-editors/vim
 app-eselect/eselect-repository
-app-i18n/fcitx-chinese-addons
 app-i18n/fcitx-configtool
+# rime（中州韵）输入法引擎：一个引擎覆盖拼音/注音/五笔/仓颉/粤拼等全套本地方案，
+# 取代 fcitx-chinese-addons（避免两个中文输入法引擎并存让新手困惑）。
+# 依赖拉入 app-i18n/librime + app-i18n/rime-data；默认方案见 rime 预置配置。
+app-i18n/fcitx-rime
 app-portage/eix
+app-portage/cpuid2cpuflags
 app-shells/bash-completion
 dev-vcs/git
 kde-apps/dolphin
@@ -16,12 +19,38 @@ kde-apps/konsole
 kde-plasma/plasma-meta
 net-misc/networkmanager
 sys-boot/grub
-sys-firmware/nvidia-firmware
+# 安全启动诊断:mokutil --sb-state 查 Secure Boot 是否开启(闭源 nvidia 需关 SB 才能加载);
+# 也用于将来想 SB 常开时的 MOK 密钥录入。
+sys-boot/mokutil
 sys-fs/btrfs-progs
 sys-fs/dosfstools
 sys-kernel/gentoo-kernel-bin
 sys-kernel/linux-firmware
+# 显卡:默认开源 nouveau（VIDEO_CARDS 含，固件由 linux-firmware 提供）;
+# 同时装闭源 nvidia-drivers 供新卡用户选（grub 有 nouveau/nvidia 启动项）。
+# 不装 sys-firmware/nvidia-firmware——那是 nouveau 的 340.x 遗留固件,闭源驱动自带固件。
+x11-drivers/nvidia-drivers
 sys-process/btop
+# 中文字体:确保简繁中文不显示为豆腐块（noto-cjk 含简繁日韩）
+media-fonts/noto-cjk
 www-client/firefox-bin
 net-proxy/flclash
 x11-misc/sddm
+# 文件系统/分区工具——保证 Calamares 能格式化对应类型、支持 LUKS/LVM 安装
+sys-fs/xfsprogs
+sys-fs/ntfs3g
+sys-fs/f2fs-tools
+sys-fs/exfatprogs
+sys-fs/cryptsetup
+sys-fs/lvm2
+sys-block/gparted
+sys-block/parted
+sys-fs/mdadm
+# 硬件诊断:inxi 一条命令出完整硬件/驱动报告;usbutils 提供 lsusb
+sys-apps/inxi
+sys-apps/usbutils
+# 系统管理/装后维护:mirrorselect 选最快 GENTOO_MIRRORS;gentoolkit 提供 equery/eclean/revdep-rebuild
+app-portage/mirrorselect
+app-portage/gentoolkit
+# 远程求助:装机求助时 ssh/scp 用
+net-misc/openssh

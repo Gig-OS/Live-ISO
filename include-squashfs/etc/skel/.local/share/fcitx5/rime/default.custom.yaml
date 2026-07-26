@@ -1,0 +1,13 @@
+# Rime 全局方案预置（新建用户含 live 用户经 /etc/skel 继承）
+# 默认启用：朙月拼音（简体）、注音、五笔86、仓颉五代、粤拼——覆盖拼音 / 注音 / 字形 / 方言。
+# 对应 rime-data 组件：rime-luna-pinyin / rime-bopomofo / rime-wubi / rime-cangjie / rime-cantonese。
+# 用户可在 Fcitx5 输入法图标右键 → 切换方案，或用 Ctrl+` 调出方案选单自行增减。
+patch:
+  schema_list:
+    - schema: luna_pinyin        # 朙月拼音（默认，简体拼音）
+    - schema: bopomofo           # 注音（繁体台湾）
+    - schema: wubi86             # 五笔86
+    - schema: cangjie5           # 仓颉五代
+    - schema: jyut6ping3         # 粤拼（粤语，rime-cantonese）
+  # 朙月拼音默认输出简体（rime 内置简繁切换用 Ctrl+` 或方案内开关）
+  menu/page_size: 7

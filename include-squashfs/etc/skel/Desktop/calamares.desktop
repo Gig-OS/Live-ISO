@@ -1,0 +1,22 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install System
+Name[zh_CN]=安装系统
+Name[zh_TW]=安裝系統
+GenericName=System Installer
+GenericName[zh_CN]=系统安装程序
+GenericName[zh_TW]=系統安裝程式
+Comment=Install this system to disk with Calamares
+Comment[zh_CN]=用 Calamares 把本系统安装到硬盘
+Comment[zh_TW]=用 Calamares 把本系統安裝到硬碟
+Keywords=calamares;system;installer;install;
+Keywords[zh_CN]=calamares;系统;安装;安装器;安装程序;
+Keywords[zh_TW]=calamares;系統;安裝;安裝器;安裝程式;
+TryExec=calamares
+Exec=sh -c "pkexec calamares"
+Icon=calamares
+Terminal=false
+StartupNotify=true
+Categories=Qt;System;
+X-AppStream-Ignore=true

@@ -1,0 +1,8 @@
+# KDE Wayland 会话的输入法预设 —— 等于替用户预先在「系统设置 → 虚拟键盘」里选好。
+# Plasma 6 Wayland 必须选【Fcitx 5 Wayland 启动器】(fcitx5-wayland-launcher.desktop):
+# 它用 Wayland 原生 input-method-v2 协议拉起 fcitx5。普通 org.fcitx.Fcitx5.desktop
+# 不是 Wayland 启动器、集成不对(实测 KDE 虚拟键盘里显示成"Fcitx 5"而非"Fcitx 5
+# Wayland 启动器")。X11 会话不读这里,靠 /etc/environment.d/90-fcitx5.conf 的环境变量。
+[Wayland]
+InputMethod=/usr/share/applications/fcitx5-wayland-launcher.desktop
+VirtualKeyboardEnabled=true

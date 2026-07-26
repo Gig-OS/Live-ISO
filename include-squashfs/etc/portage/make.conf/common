@@ -4,3 +4,7 @@ CXXFLAGS="${COMMON_FLAGS}"
 FCFLAGS="${COMMON_FLAGS}"
 FFLAGS="${COMMON_FLAGS}"
 MAKEOPTS="-j32"
+
+# Python 跟随 profile 默认(2026 树 = python3_14):calamares 已改用 gig overlay 的
+# app-admin/calamares-3.3.14-r8(PYTHON_COMPAT 含 python3_14,源自 gentoo PR 45939),
+# 不再需要 pin python3_13。整机单一 3_14 变体,与树默认一致、镜像精简、不留冗余。

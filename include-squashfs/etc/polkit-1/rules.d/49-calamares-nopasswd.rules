@@ -1,0 +1,9 @@
+// gigos: live 用户(无密码)从桌面点「安装系统」时,pkexec calamares 免认证直接起。
+// 仅对用户名 live 生效 → 装好的系统(无 live 用户)不会命中,装机后无安全残留。
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.policykit.exec" &&
+        action.lookup("program") == "/usr/bin/calamares" &&
+        subject.user == "live" && subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});

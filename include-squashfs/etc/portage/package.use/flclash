@@ -1,0 +1,4 @@
+# net-proxy/flclash 的托盘图标依赖链:flclash → libayatana-appindicator →
+# libdbusmenu,后者默认 USE 未开 gtk3 时 emerge 会因 autounmask 报
+# "USE changes necessary" 而中止解析。预置该 USE 让 flclash 可一次装上。
+>=dev-libs/libdbusmenu-16.04.0-r4 gtk3

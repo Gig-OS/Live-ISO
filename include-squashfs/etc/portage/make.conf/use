@@ -43,4 +43,5 @@ device-mapper
 cryptsetup
 libei
 gtk3
+dist-kernel
 "

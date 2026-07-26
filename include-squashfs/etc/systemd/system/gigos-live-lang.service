@@ -1,0 +1,15 @@
+[Unit]
+Description=Gig OS Live: apply language from kernel cmdline (gigos.lang=)
+# 必须在登录管理器/图形会话启动前跑,否则 Plasma 已读旧语言
+Before=display-manager.service sddm.service
+DefaultDependencies=no
+After=local-fs.target
+ConditionKernelCommandLine=gigos.lang
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/gigos-live-lang.sh
+
+[Install]
+WantedBy=multi-user.target

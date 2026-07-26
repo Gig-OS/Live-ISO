@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Disable auto-suspend & lock · live only
+Name[zh_CN]=关闭自动休眠和锁屏 · 仅 live
+Name[zh_TW]=關閉自動休眠和鎖定 · 僅 live
+GenericName=Power
+GenericName[zh_CN]=电源
+GenericName[zh_TW]=電源
+Comment=Keep the machine awake during install (no auto-suspend / screen-off / lock)
+Comment[zh_CN]=安装时保持唤醒（不自动休眠 / 熄屏 / 锁屏）
+Comment[zh_TW]=安裝時保持喚醒（不自動休眠 / 熄螢幕 / 鎖定）
+Exec=/usr/local/bin/gigos-nosleep.sh
+Icon=preferences-system-power-management
+Terminal=false
+StartupNotify=true
+Categories=Qt;System;Settings;
+X-AppStream-Ignore=true

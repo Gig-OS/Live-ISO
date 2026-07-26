@@ -1,0 +1,13 @@
+[Unit]
+Description=Generate CPU_FLAGS_X86 for this machine (gig-os)
+# 仅在 cpuid2cpuflags 存在时跑;live 与装好的系统都适用(装好系统首启即按真机 CPU 生成)。
+ConditionPathExists=/usr/bin/cpuid2cpuflags
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/gigos-cpuflags.sh
+
+[Install]
+WantedBy=multi-user.target
