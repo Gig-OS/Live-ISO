@@ -1,0 +1,7 @@
+# locale.conf 把默认语言设成 zh_CN.UTF-8,但从没带 locale.gen 去生成它。构建期 sphinx(python,
+# btrfs-progs 的 man)按 LANG 调 setlocale('') 读到未生成的 zh_CN.UTF-8 就抛 locale.Error、man 编不出;
+# 出锅的 ISO 运行时中文 locale 也一样是坏的。build.sh 注入本文件后 crun locale-gen 统一生成。
+# 不列 C.UTF-8:它是 glibc 内建 locale、无需(也无法在纯 stage3 里)经 locale-gen 编译,
+# 列了会让 locale-gen 报「not all compiled」而中止。只生成两个真 locale:中文默认 + 英文回退。
+en_US.UTF-8 UTF-8
+zh_CN.UTF-8 UTF-8
