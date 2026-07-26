@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Enable passwordless sudo · live only
+Name[zh_CN]=开启 sudo 免密 · 仅 live
+Name[zh_TW]=開啟 sudo 免密 · 僅 live
+GenericName=sudo
+Comment=Let the live user run sudo without a password (live debugging)
+Comment[zh_CN]=让 live 用户无需密码运行 sudo（live 调试用）
+Comment[zh_TW]=讓 live 使用者免密碼執行 sudo（live 偵錯用）
+Exec=/usr/local/bin/gigos-sudo-button.sh
+Icon=security-low
+Terminal=false
+StartupNotify=true
+Categories=Qt;System;Settings;
+X-AppStream-Ignore=true

@@ -1,0 +1,11 @@
+[AC][DPMSControl]
+idleTime=86400
+
+[AC][SuspendAndShutdown]
+AutoSuspendAction=0
+
+[Battery][DPMSControl]
+idleTime=86400
+
+[Battery][SuspendAndShutdown]
+AutoSuspendAction=0

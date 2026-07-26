@@ -1,1 +1,4 @@
-GENTOO_MIRRORS="https://mirrors.nju.edu.cn/gentoo/"
+# gigos-auto-mirror
+# 出厂基线(中国大陆);开机后 gigos-mirror.service 按系统语言(简→大陆 / 繁→台港 / 英→全球)覆盖。
+# 删除本行标记即停止自动覆盖,可改成自己的值(或跑 mirrorselect)。
+GENTOO_MIRRORS="https://mirrors.aliyun.com/gentoo/ https://mirrors.tuna.tsinghua.edu.cn/gentoo/ https://mirrors.ustc.edu.cn/gentoo/ https://mirrors.bfsu.edu.cn/gentoo/"

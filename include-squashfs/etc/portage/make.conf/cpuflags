@@ -1,1 +1,4 @@
+# gigos-auto-cpuflags
+# 由 gigos-cpuflags 按本机 CPU 自动生成;删除上面这行标记即停止自动覆盖,可改成自己的值。
+# 下面是出厂安全基线(x86-64-v3,2013+/AVX2);开机后 gigos-cpuflags.service 会按真机 CPU 覆盖。
 CPU_FLAGS_X86="aes avx avx2 f16c fma3 mmx mmxext pclmul popcnt rdrand sse sse2 sse3 sse4_1 sse4_2 ssse3"

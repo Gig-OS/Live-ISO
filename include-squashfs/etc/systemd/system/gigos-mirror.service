@@ -1,0 +1,14 @@
+[Unit]
+Description=Pick a regional GENTOO_MIRRORS by system language (gig-os)
+# live 与装好的系统都适用:按 /etc/locale.conf 的 LANG 选就近镜像。
+# After gigos-live-lang:live 下先让它按 gigos.lang= 写好 locale.conf,本服务再据此选镜像
+# (装好的系统没有 gigos-live-lang,locale.conf 由 Calamares 写,After 对不存在的单元无副作用)。
+After=local-fs.target gigos-live-lang.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/gigos-mirror.sh
+
+[Install]
+WantedBy=multi-user.target

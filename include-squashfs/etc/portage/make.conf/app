@@ -1,6 +1,6 @@
 GRUB_PLATFORMS="efi-64 multiboot pc"
-L10N="en-US zh-CN"
-VIDEO_CARDS="intel i965 amdgpu radeon radeonsi nouveau vesa virgl"
+L10N="en-US zh-CN zh-TW"
+VIDEO_CARDS="intel i965 amdgpu radeon radeonsi nouveau nvidia vesa virgl"
 LLVM_TARGETS="X86 BPF WebAssembly"
 
 ACCEPT_KEYWORDS="~amd64 *"

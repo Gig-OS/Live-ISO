@@ -1,6 +1,6 @@
 # Download
 
-Please go to [iso.gig-os.org](https://iso.gig-os.org/) page and download the latest build's artifact.
+Please go to [mirror.gentoozh.org](https://mirror.gentoozh.org/) and download the latest build (a file named `gig-os-DATE.iso`).
 
 # Script dependencies
 
@@ -21,7 +21,7 @@ Please go to [iso.gig-os.org](https://iso.gig-os.org/) page and download the lat
 * config: build options
 * arch-scripts: arch-chroot scripts
 * hooks: scripts to run after upgrade system
-* include-squashfs: files that will copy to suqashfs before upgrade
+* include-squashfs: files that will copy to squashfs before upgrade
 
 # Tips
 
