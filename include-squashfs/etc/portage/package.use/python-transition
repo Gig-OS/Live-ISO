@@ -12,3 +12,8 @@
 >=dev-python/typing-extensions-4.16.0 python_targets_python3_13
 >=dev-python/vcs-versioning-2.2.2 python_targets_python3_13
 >=dev-util/maturin-1.14.1 python_targets_python3_13
+# 2026-07-19 树又动了,dev-vcs/git 那步深度解算新拽进这几个,一并桥接。
+>=dev-python/gpep517-20 python_targets_python3_13
+>=dev-python/jaraco-functools-4.6.0 python_targets_python3_13
+>=dev-python/jaraco-text-4.3.0 python_targets_python3_13
+>=dev-python/platformdirs-4.10.1 python_targets_python3_13

@@ -1,0 +1,7 @@
+# calamares 走官方 ::gentoo 树,采用 3.4 系列(3.4.2 起)。3.3 的稳定版(r1/r4)只支持到 python3_13,
+# 滚动树默认已 python3_14 → REQUIRED_USE 编不过;官方 3.4.x 支持 python3_14,故直接上 3.4。
+# calamares-settings-gig 依赖的是无版本 app-admin/calamares,不挡 3.4。
+# 只挡下一个大版本 3.5+:calamares 大版本会动模块/settings schema,3.4→3.5 得先验证 settings 兼容再放行,
+# 免得滚动树某天静默升到 3.5 把装机器弄炸(3.3→3.4 就是这么个坎)。放行整条 3.4.x(官方后续 3.4.3 等免手工跟)。
+# 要上 3.5:真机验证 calamares-settings-gig 的 settings/shellprocess 兼容,再改这里 + verify-iso.sh。
+>=app-admin/calamares-3.5
