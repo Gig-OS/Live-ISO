@@ -246,10 +246,10 @@ cp --dereference /etc/resolv.conf "${WORKDIR}/squashfs"/etc/
 
 syncrepo
 
-# [gigos] 动态钉最新 amd64-stable 工具链(gcc)+ 内核 + zfs —— 必须放在【任何 emerge 之前】:下面 portage/git
+# [gigos] 动态钉最新 amd64-stable 工具链(gcc)+ 内核 + zfs,必须放在【任何 emerge 之前】:下面 portage/git
 # 升级会用 -D 拖来 gcc,晚了 gcc-16 快照就先装进来了。全局 ACCEPT_KEYWORDS="~amd64 *" 默认挑最新测试版
 # (实机踩过:内核 7.1.3 超 OpenZFS 上限、zfs-2.4.3 拖 RC 模块、gcc-16 快照把 btrfs-progs 编挂)。从刚同步好的
-# 树的 md5-cache 精确读各自最新 amd64-stable 版本(newest_stable,不靠 ACCEPT_KEYWORDS——它是增量变量、会跟
+# 树的 md5-cache 精确读各自最新 amd64-stable 版本(newest_stable,不靠 ACCEPT_KEYWORDS,它是增量变量、会跟
 # make.conf 的 ~amd64 * 累加压不住),再 mask 掉其上的测试版,portage 就停在 stable。两条兼容(内核 ≤ zfs-kmod
 # 上限、zfs=zfs-kmod 同版本)由 99-sanitize 出锅前硬断言兜底。改钉版策略就改这一段。
 GSTAB=$(newest_stable sys-devel/gcc)

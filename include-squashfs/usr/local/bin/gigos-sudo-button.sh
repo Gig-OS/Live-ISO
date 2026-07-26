@@ -7,10 +7,10 @@ case "${LANG:-}" in
     T_OK="Passwordless sudo is on for this session — 'sudo' won't ask for a password.\n\nLive / debugging only; the installed system still requires a password." ;;
   zh_TW*|zh_Hant*)
     T_FAIL="開啟 sudo 免密失敗（取消授權或出錯）。"
-    T_OK="本次工作階段已開啟 sudo 免密——「sudo」不再要求輸入密碼。\n\n僅供 live／偵錯;裝好的系統仍需密碼。" ;;
+    T_OK="本次工作階段已開啟 sudo 免密,「sudo」不再要求輸入密碼。\n\n僅供 live／偵錯;裝好的系統仍需密碼。" ;;
   *)
     T_FAIL="开启 sudo 免密失败（取消授权或出错）。"
-    T_OK="本次会话已开启 sudo 免密——「sudo」不再要求输入密码。\n\n仅供 live／调试;装好的系统仍需密码。" ;;
+    T_OK="本次会话已开启 sudo 免密,「sudo」不再要求输入密码。\n\n仅供 live／调试;装好的系统仍需密码。" ;;
 esac
 
 if ! pkexec /usr/local/bin/gigos-sudo.sh on; then
