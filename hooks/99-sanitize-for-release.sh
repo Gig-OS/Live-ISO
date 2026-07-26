@@ -97,6 +97,29 @@ done
 grep -qE '^[[:space:]]*-[[:space:]]*shellprocess[[:space:]]*$' "${CSGSET}" 2>/dev/null || { echo "[99-sanitize] 致命:calamares settings.conf 未启用 shellprocess 清理步骤(清理不会跑)→ 中止"; exit 1; }
 echo "[99-sanitize] 安全断言通过:装机清理契约已接(autologin / SSH 密码登录 / polkit 残留会被 calamares 删除)"
 
+# ⑦.5 settings.conf 排的每个模块,calamares 里都得真有。calamares 大版本会增删模块(3.3→3.4 就换过一轮),
+#      而 settings 是我们 fork 自己维护的:一旦排了个新版没有的模块,构建期一切正常、装机跑到那步才炸。
+#      这里在出锅前静态比对「settings.conf 的 sequence」vs「已装的 calamares 模块目录」,不匹配就中止。
+CALMODDIR=""
+for d in "${WORKDIR}/squashfs"/usr/lib64/calamares/modules "${WORKDIR}/squashfs"/usr/lib/calamares/modules; do
+    [ -d "${d}" ] && { CALMODDIR="${d}"; break; }
+done
+if [ -f "${CSGSET}" ] && [ -n "${CALMODDIR}" ]; then
+    MISSMOD=""
+    # 只取 sequence 段里形如「- 模块名」的整行(排除 instances 段的「- id: xxx」,那种带冒号);
+    # shellprocess@nvidia 这类实例回落到基础模块名。
+    for m in $(sed -n '/^sequence:/,/^[a-z]/p' "${CSGSET}" 2>/dev/null \
+               | grep -oE '^[[:space:]]*-[[:space:]]*[a-z0-9@_.-]+[[:space:]]*$' \
+               | sed -E 's/^[[:space:]]*-[[:space:]]*//; s/[[:space:]]*$//; s/@.*//' | sort -u); do
+        [ -d "${CALMODDIR}/${m}" ] || ls "${CALMODDIR}/${m}".* >/dev/null 2>&1 || MISSMOD="${MISSMOD} ${m}"
+    done
+    [ -z "${MISSMOD}" ] \
+        || { echo "[99-sanitize] 致命:settings.conf 排了 calamares 里不存在的模块:${MISSMOD} → 装机跑到该步会炸,中止(calamares 升过大版本?对照 ${CALMODDIR##*/squashfs})"; exit 1; }
+    echo "[99-sanitize] 安全断言通过:settings.conf 的模块在本锅 calamares 中全部存在"
+else
+    echo "[99-sanitize] 提示:未找到 calamares 模块目录或 settings.conf,跳过模块比对"
+fi
+
 # ⑧ ZFS 根装机契约断言。仅当本锅【确实装上了 ZBM 工具】(generate-zbm 在 squashfs 内)才强校验——
 #    这样 --keep-going 下若 guru 偶发使 zfsbootmenu 被跳过,非 ZFS 盘照常出;但凡装了 ZBM,就必须保证
 #    装机后处理脚本在位、settings 已接 shellprocess@zfs、且 ZBM config 启用了单文件 EFI,否则 ZFS 根装出
@@ -130,13 +153,26 @@ if [ -x "${SQROOT}/usr/bin/generate-zbm" ] || [ -x "${SQROOT}/usr/sbin/generate-
         || { echo "[99-sanitize] 致命:装了 ZFS 用户态/ZBM 但内核 ${KMODVER:-?} 没有 zfs.ko(内核多半超了 OpenZFS 支持上限、zfs-kmod 被静默跳过)→ 出锅装不了 ZFS,中止(见 package.mask/kernel-zfs 的内核钉版)"; exit 1; }
     find "${SQROOT}/lib/modules/${KMODVER}" -name 'spl.ko*' 2>/dev/null | grep -q . \
         || echo "[99-sanitize] 提示:${KMODVER} 有 zfs.ko 但无独立 spl.ko(较新 OpenZFS 把 spl 并进 zfs.ko,正常)"
-    # userland 与内核模块必须同版本:ZFS 要求 zfs 工具和 zfs.ko 版本一致(测试版曾错配 userland 2.4.3 + kmod 2.3.8,
-    # 版本不齐 ZFS 就不能用,而单查 zfs.ko 在不在会漏掉)。比对已装的 sys-fs/zfs 与 sys-fs/zfs-kmod 版本。
+    # userland 与内核模块必须同版本(版本不齐 ZFS 就不能用,单查 zfs.ko 在不在会漏掉)。
+    # 上游 >=2.4.1 起把 kmod 合并进 sys-fs/zfs(USE 里带 modules),一个包出用户态和模块、天然同版本,
+    # 此时【没有】独立的 sys-fs/zfs-kmod,再拿它比对会把好锅误判成致命。故按已装 zfs 的 USE 自动分流。
     ZV=$(ls -d "${SQROOT}"/var/db/pkg/sys-fs/zfs-[0-9]* 2>/dev/null | head -1 | sed -E 's#.*/zfs-##')
     ZKV=$(ls -d "${SQROOT}"/var/db/pkg/sys-fs/zfs-kmod-[0-9]* 2>/dev/null | head -1 | sed -E 's#.*/zfs-kmod-##')
-    { [ -n "${ZV}" ] && [ "${ZV}" = "${ZKV}" ]; } \
-        || { echo "[99-sanitize] 致命:zfs userland(${ZV:-无}) 与 zfs-kmod(${ZKV:-无}) 版本不一致 → ZFS 不能用,中止(见 package.mask/kernel-zfs 的 ZFS 钉版)"; exit 1; }
-    echo "[99-sanitize] 安全断言通过:ZFS 根装机契约已接(zfs.ko 在 ${KMODVER}、userland=kmod=${ZV}、ZBM 工具/脚本/序列/config 齐备、shellprocess@zfs 在 bootloader 之后)"
+    ZUSE=" $(cat "${SQROOT}"/var/db/pkg/sys-fs/zfs-[0-9]*/USE 2>/dev/null | head -1) "
+    [ -n "${ZV}" ] || { echo "[99-sanitize] 致命:squashfs 里没装 sys-fs/zfs 却有 ZBM → ZFS 不能用,中止"; exit 1; }
+    case "${ZUSE}" in
+        *" modules "*)
+            # 合并版:模块由 zfs 自己出。zfs.ko 上面已断言存在;这里只再确认没混进旧的独立 kmod 包。
+            [ -z "${ZKV}" ] \
+                || { echo "[99-sanitize] 致命:zfs-${ZV} 已自带模块(USE=modules),却又装了独立 sys-fs/zfs-kmod-${ZKV} → 两份模块会打架,中止"; exit 1; }
+            ZMODE="合并版 zfs-${ZV}[modules]" ;;
+        *)
+            # 旧拆分结构:两个包必须同版本。
+            [ "${ZV}" = "${ZKV}" ] \
+                || { echo "[99-sanitize] 致命:zfs userland(${ZV}) 与 zfs-kmod(${ZKV:-无}) 版本不一致 → ZFS 不能用,中止(见 package.mask/kernel-zfs 的 ZFS 钉版)"; exit 1; }
+            ZMODE="拆分版 userland=kmod=${ZV}" ;;
+    esac
+    echo "[99-sanitize] 安全断言通过:ZFS 根装机契约已接(zfs.ko 在 ${KMODVER}、${ZMODE}、ZBM 工具/脚本/序列/config 齐备、shellprocess@zfs 在 bootloader 之后)"
 else
     echo "[99-sanitize] 提示:本锅未含 generate-zbm(zfsbootmenu 未装,可能 --keep-going 跳过)→ 跳过 ZFS 根装机断言;ZFS 根安装将不可启动,非 ZFS 安装不受影响"
 fi

@@ -5,3 +5,4 @@
 # 列了会让 locale-gen 报「not all compiled」而中止。只生成两个真 locale:中文默认 + 英文回退。
 en_US.UTF-8 UTF-8
 zh_CN.UTF-8 UTF-8
+zh_TW.UTF-8 UTF-8

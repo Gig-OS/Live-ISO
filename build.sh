@@ -233,10 +233,13 @@ mounttmpfs
 # 直接用 localedef 生成需要的两个真 locale(不走 locale-gen:它会强行把内建的 C.UTF-8 也算进去,而纯
 # stage3 里 C.UTF-8 编不出 → 「not all compiled」中止整锅;C.UTF-8 是内建 locale,本就无需生成)。
 # localedef 遇字符集告警也可能返回非零,故不看退出码,改断言 zh_CN 真生成出来了(它才是构建 LANG 依赖的)。
+# 三语 ISO=简/繁/英,三个都要真编进 locale-archive(verify-iso.sh 硬查 zh_CN.utf8 + zh_TW.utf8;
+# 少了中文会回退 C)。glibc 自己的 postinst locale-gen 在纯 stage3 里会 abort(见上),故这里自己 localedef。
 crun localedef -i en_US -f UTF-8 en_US.UTF-8 || true
 crun localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
-crun locale -a 2>/dev/null | grep -qi '^zh_CN' || { echo "[gigos] 致命:zh_CN.UTF-8 locale 没能生成,man/sphinx 会编挂,中止"; exit 1; }
-echo "[gigos] locale 就绪:$(crun locale -a 2>/dev/null | grep -iE '^en_US|^zh_CN' | tr '\n' ' ')"
+crun localedef -i zh_TW -f UTF-8 zh_TW.UTF-8 || true
+{ crun locale -a 2>/dev/null | grep -qi '^zh_CN' && crun locale -a 2>/dev/null | grep -qi '^zh_TW'; } || { echo "[gigos] 致命:zh_CN/zh_TW.UTF-8 locale 没能生成,man/sphinx 会编挂、ISO 中文回退 C,中止"; exit 1; }
+echo "[gigos] locale 就绪:$(crun locale -a 2>/dev/null | grep -iE '^en_US|^zh_CN|^zh_TW' | tr '\n' ' ')"
 
 # DNS
 cp --dereference /etc/resolv.conf "${WORKDIR}/squashfs"/etc/
@@ -251,21 +254,32 @@ syncrepo
 # 上限、zfs=zfs-kmod 同版本)由 99-sanitize 出锅前硬断言兜底。改钉版策略就改这一段。
 GSTAB=$(newest_stable sys-devel/gcc)
 KSTAB=$(newest_stable sys-kernel/gentoo-kernel-bin)
-# ZSTAB 取【zfs-kmod】的最新 stable(不是 sys-fs/zfs 用户态):内核模块才是约束——userland 可能比 kmod 先稳定
-# (实机遇到 zfs-2.4.3 已 stable 但 zfs-kmod-2.4.3 还不存在,kmod 最新 stable 只到 2.3.6)。以 kmod 为准、
-# userland 跟到同版本(zfs-${ZSTAB} 也是 stable,且 Gentoo 用 ~zfs-kmod-${PV} 锁两者匹配)。
-ZSTAB=$(newest_stable sys-fs/zfs-kmod)
+# ZFS 有两种形态,这里【自动判别】,免得上游一变就要手改:
+#   - 新(>=2.4.1):上游把 zfs-kmod 合并进 sys-fs/zfs(ebuild 里 MODULES_OPTIONAL_IUSE=+modules + linux-mod-r1),
+#     一个包出用户态和 zfs.ko;zfs-kmod 那边最新 stable 停在 2.3.6、2.4.0_rc2-r1 连 KEYWORDS 都空了。
+#   - 旧(<=2.3.8):zfs + zfs-kmod 两个包,必须同版本。
+# 先取 sys-fs/zfs 的最新 stable,读它的 ebuild 判断是否已合并:合并了就只以它为准、内核上限从它自己读;
+# 没合并才退回旧路(以 zfs-kmod 的最新 stable 为准)。这样 zfs-kmod 将来被移出树也不会把整锅炸掉。
+ZSTAB=$(newest_stable sys-fs/zfs)
+ZEB="${WORKDIR}/squashfs/var/db/repos/gentoo/sys-fs/zfs/zfs-${ZSTAB}.ebuild"
+if [ -n "${ZSTAB}" ] && grep -q 'MODULES_OPTIONAL_IUSE' "${ZEB}" 2>/dev/null; then
+    ZFS_MERGED=1
+    ZKMAX=$(grep -oE 'MODULES_KERNEL_MAX=[0-9.]+' "${ZEB}" 2>/dev/null | head -1 | cut -d= -f2)
+else
+    ZFS_MERGED=0
+    ZSTAB=$(newest_stable sys-fs/zfs-kmod)
+    ZKMAX=$(grep -oE 'MODULES_KERNEL_MAX=[0-9.]+' "${WORKDIR}/squashfs/var/db/repos/gentoo/sys-fs/zfs-kmod/zfs-kmod-${ZSTAB}.ebuild" 2>/dev/null | head -1 | cut -d= -f2)
+fi
 [ -n "${KSTAB}" ] && [ -n "${ZSTAB}" ] && [ -n "${GSTAB}" ] || { echo "[gigos] 致命:算不出 amd64-stable 内核/zfs/gcc 版本(md5-cache 读不到?树没同步好?),中止"; exit 1; }
-ZKMAX=$(grep -oE 'MODULES_KERNEL_MAX=[0-9.]+' "${WORKDIR}/squashfs/var/db/repos/gentoo/sys-fs/zfs-kmod/zfs-kmod-${ZSTAB}.ebuild" 2>/dev/null | head -1 | cut -d= -f2)
 KMM=$(echo "${KSTAB}" | cut -d. -f1-2)
-echo "[gigos] 动态 stable 钉版:gcc ${GSTAB}、内核 ${KSTAB}、zfs/zfs-kmod ${ZSTAB}(zfs-kmod 内核上限 ${ZKMAX:-未知})"
+echo "[gigos] 动态 stable 钉版:gcc ${GSTAB}、内核 ${KSTAB}、zfs ${ZSTAB}($([ "${ZFS_MERGED}" = 1 ] && echo '已合并 kmod' || echo "另配 zfs-kmod ${ZSTAB}"),内核上限 ${ZKMAX:-未知})"
 if [ -n "${ZKMAX}" ] && [ "$(printf '%s\n%s\n' "${ZKMAX}" "${KMM}" | sort -V | tail -1)" = "${KMM}" ] && [ "${KMM}" != "${ZKMAX}" ];then
-    echo "[gigos] 警告:stable 内核 ${KMM} 超过 stable zfs-kmod 上限 ${ZKMAX},zfs-kmod 可能编不过(靠 99-sanitize 断言兜底)"
+    echo "[gigos] 警告:stable 内核 ${KMM} 超过 OpenZFS 上限 ${ZKMAX},zfs 模块可能编不过(靠 99-sanitize 断言兜底)"
 fi
 mkdir -p "${WORKDIR}/squashfs/etc/portage/package.mask"
 cat > "${WORKDIR}/squashfs/etc/portage/package.mask/kernel-zfs" <<MASKEOF
 # 本文件由 build.sh 每锅动态生成:钉最新 amd64-stable gcc + 内核 + zfs,免手工维护(改法见 build.sh 生成它那段)。
-# 本锅算得:gcc ${GSTAB}、内核 ${KSTAB}、zfs/zfs-kmod ${ZSTAB}。mask 掉算出的 stable 版之上的测试版,portage 停在 stable。
+# 本锅算得:gcc ${GSTAB}、内核 ${KSTAB}、zfs ${ZSTAB}。mask 掉算出的 stable 版之上的测试版,portage 停在 stable。
 # vanilla-kernel 必须一起 mask:sys-fs/zfs[dist-kernel] 依赖【无版本】的 virtual/dist-kernel,-uD @world 会挑
 # 版本最高的 provider 来满足它。gentoo-kernel-bin 钉在 ${KSTAB} 了,但 vanilla-kernel 没钉 → 实机上被拖来
 # vanilla-kernel-7.1.3(装出第二个内核 /lib/modules/7.1.3-dist),它超 OpenZFS 上限、没 zfs.ko,被 99-sanitize
@@ -276,16 +290,23 @@ cat > "${WORKDIR}/squashfs/etc/portage/package.mask/kernel-zfs" <<MASKEOF
 >sys-kernel/gentoo-sources-${KSTAB}
 >sys-kernel/vanilla-kernel-${KSTAB}
 >sys-fs/zfs-${ZSTAB}
->sys-fs/zfs-kmod-${ZSTAB}
 MASKEOF
+# 旧拆分结构才需要连 zfs-kmod 一起钉(合并版没有这个包,写了也没意义)。
+[ "${ZFS_MERGED}" = 1 ] || echo ">sys-fs/zfs-kmod-${ZSTAB}" >> "${WORKDIR}/squashfs/etc/portage/package.mask/kernel-zfs"
 
 # 先升级 portage。FEATURES="-merge-sync":portage 3.0.79 自升级时 _post_merge_sync 引用新版
 # 才有的 _SyncfsProcess 模块,运行中的旧 portage 没有 → ModuleNotFoundError、安装失败。
 # merge-sync 只为防断电丢数据,对 tmpfs 全内存构建无意义,关掉零损失。
 retry crun FEATURES="-merge-sync" emerge -vu1q --jobs "${CORES}" portage
-# we need git to sync overlay
+# we need git to sync overlay。
+# 这步是 -uD 深度解算,会把 @system 一大串构建后端拖进来算,滚动树一漂就可能要求新的 USE
+# (2026-07-19 实机:要 gpep517/jaraco-*/platformdirs 的 python3_13,整锅一分钟就挂)。
+# 给它和 @world 同样的自愈参数:autounmask 自己把 USE 写进 zz-autounmask 并续跑;
+# CONFIG_PROTECT="-*" 让写入当次即生效(否则被拦成 ._cfg、续跑仍缺那条);
+# --autounmask-keep-masks=y 保证不会掀掉我们钉 stable 的 package.mask。
+# zz-autounmask 出厂前由 99-sanitize 清掉,不会带进 ISO。
 if ( ! crun which git);then
-    crun emerge -vuDq --jobs "${CORES}" dev-vcs/git || exit 1
+    crun CONFIG_PROTECT="-*" emerge -vuDq --jobs "${CORES}" --autounmask-continue --autounmask-keep-masks=y dev-vcs/git || exit 1
 fi
 syncrepo
 
