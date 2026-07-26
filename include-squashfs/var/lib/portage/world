@@ -26,8 +26,6 @@ sys-fs/btrfs-progs
 sys-fs/dosfstools
 sys-kernel/gentoo-kernel-bin
 sys-kernel/linux-firmware
-# pahole(dwarves):内核 BTF 生成 + live 上手动编内核模块要用;缺它只有内核自带的 dummy stub。
-dev-util/dwarves
 # 显卡:默认开源 nouveau（VIDEO_CARDS 含，固件由 linux-firmware 提供）;
 # 同时装闭源 nvidia-drivers 供新卡用户选（grub 有 nouveau/nvidia 启动项）。
 # 不装 sys-firmware/nvidia-firmware——那是 nouveau 的 340.x 遗留固件,闭源驱动自带固件。

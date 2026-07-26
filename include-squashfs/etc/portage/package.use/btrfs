@@ -1,0 +1,4 @@
+# reiserfs 已从 Linux 内核移除(6.x),btrfs-progs 的 reiserfs→btrfs 转换代码依赖 reiserfscore、且在新工具链下
+# 编不过(emake failed,实机卡在 635/636)。桌面 profile 默认给 btrfs-progs 开了 reiserfs,这里关掉——2026 年
+# 没人再转 reiserfs 盘,关了不影响 ext2/ext4→btrfs 转换(convert USE 仍在)。
+sys-fs/btrfs-progs -reiserfs

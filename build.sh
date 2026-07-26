@@ -74,6 +74,21 @@ retry () {
     done
 }
 
+# 从 chroot 树的 md5-cache 读某包的最新 amd64-STABLE 版本(精确 token 匹配,区分 amd64 与 ~amd64)。
+# 用 md5-cache 而非 `ACCEPT_KEYWORDS=amd64 emerge`:后者是增量变量,会跟 chroot make.conf 的 "~amd64 *"
+# 累加而非替换、压不住测试版(实机踩过:算出的是 gcc-16 快照 / 内核 7.1.3 / zfs-2.4.3 测试版)。
+# md5-cache 随 gentoo git 树自带,离线可读、与 ACCEPT_KEYWORDS 无关。
+newest_stable () {
+    local cat="${1%/*}" pn="${1#*/}"
+    local mc="${WORKDIR}/squashfs/var/db/repos/gentoo/metadata/md5-cache"
+    local f
+    for f in "${mc}/${cat}/${pn}"-[0-9]*; do
+        [ -f "${f}" ] || continue
+        awk -F= '/^KEYWORDS=/{n=split($2,a," "); for(i=1;i<=n;i++) if(a[i]=="amd64") ok=1} END{exit !ok}' "${f}" || continue
+        basename "${f}" | sed "s/^${pn}-//"
+    done | sort -V | tail -1
+}
+
 function syncrepo () {
 # try three times to sync
 if [ -d "${WORKDIR}/squashfs/var/db/repos/gentoo" ];then
@@ -212,10 +227,57 @@ rsync -rl --copy-unsafe-links "${WORKDIR}"/include-squashfs/* "${WORKDIR}/squash
 refreshconfig
 mounttmpfs
 
+# [gigos] 生成 locale。fork 出的是中文 ISO(locale.conf=zh_CN.UTF-8),却一直没带 locale.gen,该 locale
+# 从没生成过。构建期 btrfs-progs 的 man 走 sphinx(python),按 LANG 调 setlocale('') 读到未生成的
+# zh_CN.UTF-8 → locale.Error、man 编译失败(实机卡在 btrfs-progs 并连累依赖它的 calamares-settings-gig)。
+# 直接用 localedef 生成需要的两个真 locale(不走 locale-gen:它会强行把内建的 C.UTF-8 也算进去,而纯
+# stage3 里 C.UTF-8 编不出 → 「not all compiled」中止整锅;C.UTF-8 是内建 locale,本就无需生成)。
+# localedef 遇字符集告警也可能返回非零,故不看退出码,改断言 zh_CN 真生成出来了(它才是构建 LANG 依赖的)。
+crun localedef -i en_US -f UTF-8 en_US.UTF-8 || true
+crun localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
+crun locale -a 2>/dev/null | grep -qi '^zh_CN' || { echo "[gigos] 致命:zh_CN.UTF-8 locale 没能生成,man/sphinx 会编挂,中止"; exit 1; }
+echo "[gigos] locale 就绪:$(crun locale -a 2>/dev/null | grep -iE '^en_US|^zh_CN' | tr '\n' ' ')"
+
 # DNS
 cp --dereference /etc/resolv.conf "${WORKDIR}/squashfs"/etc/
 
 syncrepo
+
+# [gigos] 动态钉最新 amd64-stable 工具链(gcc)+ 内核 + zfs —— 必须放在【任何 emerge 之前】:下面 portage/git
+# 升级会用 -D 拖来 gcc,晚了 gcc-16 快照就先装进来了。全局 ACCEPT_KEYWORDS="~amd64 *" 默认挑最新测试版
+# (实机踩过:内核 7.1.3 超 OpenZFS 上限、zfs-2.4.3 拖 RC 模块、gcc-16 快照把 btrfs-progs 编挂)。从刚同步好的
+# 树的 md5-cache 精确读各自最新 amd64-stable 版本(newest_stable,不靠 ACCEPT_KEYWORDS——它是增量变量、会跟
+# make.conf 的 ~amd64 * 累加压不住),再 mask 掉其上的测试版,portage 就停在 stable。两条兼容(内核 ≤ zfs-kmod
+# 上限、zfs=zfs-kmod 同版本)由 99-sanitize 出锅前硬断言兜底。改钉版策略就改这一段。
+GSTAB=$(newest_stable sys-devel/gcc)
+KSTAB=$(newest_stable sys-kernel/gentoo-kernel-bin)
+# ZSTAB 取【zfs-kmod】的最新 stable(不是 sys-fs/zfs 用户态):内核模块才是约束——userland 可能比 kmod 先稳定
+# (实机遇到 zfs-2.4.3 已 stable 但 zfs-kmod-2.4.3 还不存在,kmod 最新 stable 只到 2.3.6)。以 kmod 为准、
+# userland 跟到同版本(zfs-${ZSTAB} 也是 stable,且 Gentoo 用 ~zfs-kmod-${PV} 锁两者匹配)。
+ZSTAB=$(newest_stable sys-fs/zfs-kmod)
+[ -n "${KSTAB}" ] && [ -n "${ZSTAB}" ] && [ -n "${GSTAB}" ] || { echo "[gigos] 致命:算不出 amd64-stable 内核/zfs/gcc 版本(md5-cache 读不到?树没同步好?),中止"; exit 1; }
+ZKMAX=$(grep -oE 'MODULES_KERNEL_MAX=[0-9.]+' "${WORKDIR}/squashfs/var/db/repos/gentoo/sys-fs/zfs-kmod/zfs-kmod-${ZSTAB}.ebuild" 2>/dev/null | head -1 | cut -d= -f2)
+KMM=$(echo "${KSTAB}" | cut -d. -f1-2)
+echo "[gigos] 动态 stable 钉版:gcc ${GSTAB}、内核 ${KSTAB}、zfs/zfs-kmod ${ZSTAB}(zfs-kmod 内核上限 ${ZKMAX:-未知})"
+if [ -n "${ZKMAX}" ] && [ "$(printf '%s\n%s\n' "${ZKMAX}" "${KMM}" | sort -V | tail -1)" = "${KMM}" ] && [ "${KMM}" != "${ZKMAX}" ];then
+    echo "[gigos] 警告:stable 内核 ${KMM} 超过 stable zfs-kmod 上限 ${ZKMAX},zfs-kmod 可能编不过(靠 99-sanitize 断言兜底)"
+fi
+mkdir -p "${WORKDIR}/squashfs/etc/portage/package.mask"
+cat > "${WORKDIR}/squashfs/etc/portage/package.mask/kernel-zfs" <<MASKEOF
+# 本文件由 build.sh 每锅动态生成:钉最新 amd64-stable gcc + 内核 + zfs,免手工维护(改法见 build.sh 生成它那段)。
+# 本锅算得:gcc ${GSTAB}、内核 ${KSTAB}、zfs/zfs-kmod ${ZSTAB}。mask 掉算出的 stable 版之上的测试版,portage 停在 stable。
+# vanilla-kernel 必须一起 mask:sys-fs/zfs[dist-kernel] 依赖【无版本】的 virtual/dist-kernel,-uD @world 会挑
+# 版本最高的 provider 来满足它。gentoo-kernel-bin 钉在 ${KSTAB} 了,但 vanilla-kernel 没钉 → 实机上被拖来
+# vanilla-kernel-7.1.3(装出第二个内核 /lib/modules/7.1.3-dist),它超 OpenZFS 上限、没 zfs.ko,被 99-sanitize
+# 逮住中止。把 vanilla-kernel 也钉到 ${KSTAB},virtual/dist-kernel 就只能落到 gentoo-kernel-bin-${KSTAB}(world 里已有)。
+>sys-devel/gcc-${GSTAB}
+>sys-kernel/gentoo-kernel-bin-${KSTAB}
+>sys-kernel/gentoo-kernel-${KSTAB}
+>sys-kernel/gentoo-sources-${KSTAB}
+>sys-kernel/vanilla-kernel-${KSTAB}
+>sys-fs/zfs-${ZSTAB}
+>sys-fs/zfs-kmod-${ZSTAB}
+MASKEOF
 
 # 先升级 portage。FEATURES="-merge-sync":portage 3.0.79 自升级时 _post_merge_sync 引用新版
 # 才有的 _SyncfsProcess 模块,运行中的旧 portage 没有 → ModuleNotFoundError、安装失败。
