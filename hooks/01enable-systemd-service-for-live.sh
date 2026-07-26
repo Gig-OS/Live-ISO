@@ -10,6 +10,10 @@ crun systemctl enable NetworkManager
 # （另见 buildbootfiles 的 dracut --omit network-manager：从源头不把 NM 放进 initramfs。）
 crun systemctl mask NetworkManager-initrd.service
 
+# NTP 时钟同步:live 默认 Factory 时区、时钟未同步会影响 https 证书校验、emerge-webrsync 的 gpg 验证、
+# ZFS 快照时间戳。systemd-timesyncd 随 systemd 自带,开机自动对时。
+crun systemctl enable systemd-timesyncd.service
+
 # Sddm
 crun systemctl enable sddm
 

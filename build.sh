@@ -278,7 +278,10 @@ crun sh -c 'O=/usr/src/linux/tools/objtool/objtool; if [ -e "$O" ]; then "$O" >/
 
 # 升级整个系统。CONFIG_PROTECT="-*" 让 --autounmask-continue 写的 package.use 当次即生效
 # (否则被 CONFIG_PROTECT 拦成 ._cfg 待处理、当次不读 → autounmask 续跑仍缺那条 → 失败)。
-# FEATURES="-merge-sync" 理由同 portage 升级处。autounmask 自愈滚动树的 USE / 关键字漂移。
+# FEATURES="-merge-sync" 理由同 portage 升级处。autounmask 自愈滚动树的 USE / 关键字漂移;
+# FEATURES="-merge-sync" 理由同 portage 升级处。autounmask 自愈滚动树的 USE / 关键字漂移;但 python
+# 目标迁移期(官方 stage3 种子仍带 3.13)那串 @system 构建后端的 3_13 桥接,portage 回溯收敛不了
+# (试过 --autounmask-backtrack=y + --backtrack=300 仍早退),改由 package.use/python-transition 显式给足 USE。
 retry crun CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs "${CORES}" --keep-going --autounmask-continue --autounmask-keep-masks=y @world || exit 1
 
 # 显式补装 EXTRA_PKGS:@world 回溯可能把它们丢掉(如 calamares 撞 docutils 版本冲突被丢弃),
