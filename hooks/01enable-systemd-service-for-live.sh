@@ -58,3 +58,6 @@ chmod 0755 "${WORKDIR}/squashfs/etc/skel/Desktop/gigos-sudo-nopasswd.desktop"
 # 注:这【不】是 live systemd 服务(无 systemctl enable),仅装机时被 Calamares 调用,同 gigos-fix-crypttab.sh。
 chmod +x "${WORKDIR}/squashfs/usr/local/bin/gigos-zfs-bootmenu.sh"
 chmod +x "${WORKDIR}/squashfs/usr/local/bin/gigos-zfs-prebootloader.sh"
+# LUKS 加密根装机开机卡死修复脚本(calamares shellprocess 用 test -x 调,丢了 exec 位会静默不跑)。
+# 与上面 zfs 脚本同为装机时脚本,一并 chmod 兜底,别让某次 exec 位丢失静默毁掉加密安装的可启动性。
+chmod +x "${WORKDIR}/squashfs/usr/local/bin/gigos-fix-crypttab.sh"

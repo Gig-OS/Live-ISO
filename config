@@ -1,10 +1,35 @@
-ARCH=amd64
-MICROARCH=amd64
-SUFFIX=desktop-systemd
-MIRROR="https://mirrors.ustc.edu.cn/"
-DIST="${MIRROR}/gentoo/releases/${ARCH}/autobuilds"
-#GITMIRROR="${MIRROR}/gentoo.git"
-GITMIRROR="https://github.com/gentoo-mirror/gentoo.git"
-CORES="12"
-TMPFS="40G"
-MAKEOPTS="-j${CORES}"
+# 构建参数。每项都用 := 默认值，环境变量可覆盖：autobuild 用 env 传 host 专属的
+# CORES / TMPFS / MAKEOPTS / 缓存路径，手动构建直接改这里的默认值即可。
+: "${ARCH:=amd64}"
+: "${MICROARCH:=amd64}"
+: "${SUFFIX:=desktop-systemd}"
+
+# 默认走官方源：stage3 永远最新、不挡 wget。香港 5Gbps 直连 ~100MB/s。
+# 换 CN 镜像：改 MIRROR，并按该镜像布局设 DIST 和 GENTOO_MIRRORS（CN 镜像根下多一层 /gentoo）。
+: "${MIRROR:=https://distfiles.gentoo.org}"
+: "${DIST:=${MIRROR}/releases/${ARCH}/autobuilds}"
+: "${GENTOO_MIRRORS:=${MIRROR}}"
+: "${GITMIRROR:=https://github.com/gentoo-mirror/gentoo.git}"
+
+: "${CORES:=12}"
+# TMPFS 空 = 不在 chroot 内单独挂 tmpfs（autobuild 把整个 WORK 放 tmpfs，故 export TMPFS=""）。
+# 手动构建默认 40G，给 /var/tmp/portage 挂 tmpfs 加速。用 = 而非 := 让 export 的空值生效。
+: "${TMPFS=40G}"
+: "${MAKEOPTS:=-j${CORES} -l${CORES}}"
+# 瞬时失败（网络/DNS 抽风）的重试次数与间隔（秒）。
+: "${RETRY_MAX:=3}"
+: "${RETRY_DELAY:=30}"
+
+# 社区 overlay（name|git-url）。@world 前显式 clone（emerge --sync 不建不存在的 location）。
+OVERLAYS=(
+    "gig|https://github.com/Gig-OS/gig.git"
+    "gentoo-zh|https://github.com/microcai/gentoo-zh.git"
+    "guru|https://github.com/gentoo-mirror/guru.git"
+)
+# 把 calamares-settings-gig 的 9999 ebuild 指向这个 fork（带装机清理 / nvidia 自动配）。
+: "${CSG_FORK_URL:=https://github.com/Gentoo-zh/calamares-settings-gig.git}"
+# @world 后显式补装的包（@world 回溯可能丢、显式参数不会）。
+EXTRA_PKGS=(
+    app-admin/calamares-settings-gig
+    net-proxy/flclash
+)
