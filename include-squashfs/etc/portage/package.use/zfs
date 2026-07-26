@@ -1,0 +1,9 @@
+# zfs-kmod 随发行版二进制内核(gentoo-kernel-bin)自动重建,避免内核更新后模块失配
+sys-fs/zfs dist-kernel
+
+# ZFSBootMenu 单文件 UEFI EFI 的生成依赖:generate-zbm 用 systemd 的 EFI stub
+# (/usr/lib/systemd/boot/efi/linuxx64.efi.stub)把内核+initramfs 打成一个可引导的 *.EFI。
+# 该 stub 仅在 sys-apps/systemd 开了 boot USE 时才安装(plasma/systemd profile 默认不开),故在此显式开。
+# 注:guru 的 sys-boot/zfsbootmenu 没有 dracut/efi/uefi 之类 USE 标志(它只是 perl 脚本 + generate-zbm),
+# 因此【不要】给 sys-boot/zfsbootmenu 写 USE——写了会因未知 USE 标志导致 emerge 失败。
+sys-apps/systemd boot
