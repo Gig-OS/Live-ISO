@@ -22,13 +22,19 @@ fi
 
 # ② 移除任何构建机专用的二进制包缓存调优（若构建包装层注入过）。
 #    删整文件命中的 EMERGE_DEFAULT_OPTS / FEATURES 注入片段，再逐文件擦关键字。
-rm -f "${MC}"/zz-buildhost "${MC}"/zz-loadavg
+rm -f "${MC}"/zz-buildhost
 if [ -d "${MC}" ]; then
     grep -rlE 'buildpkg|--usepkg|--buildpkg|load-average=' "${MC}/" 2>/dev/null \
       | while read -r f; do
             sed -i -E 's/(--usepkg|--buildpkg|--load-average=[0-9]+)//g; s/[[:space:]]+buildpkg//g' "$f"
         done
 fi
+
+# ②.5 清掉 @world 的 --autounmask-continue 在构建期写的 zz-autounmask(USE / keyword / mask pin)。
+#     CONFIG_PROTECT="-*" 下这些直接落进系统树,是构建期滚动树漂移的产物,不应随 ISO 发给用户。
+PRT="${WORKDIR}/squashfs/etc/portage"
+rm -f "${PRT}/package.use/zz-autounmask" "${PRT}/package.accept_keywords/zz-autounmask" \
+      "${PRT}/package.mask/zz-autounmask" "${PRT}/package.license/zz-autounmask" 2>/dev/null || true
 
 # ③ CPU_FLAGS_X86 必须按【用户的】CPU 生成，不能用构建机的固定值。
 #    Calamares 装机是把本 live squashfs 整盘复制到用户硬盘，所以这里的
@@ -104,6 +110,12 @@ if [ -x "${SQROOT}/usr/bin/generate-zbm" ] || [ -x "${SQROOT}/usr/sbin/generate-
     # shellprocess@zfs 必须接在 bootloader 之后(否则 GRUB 的 fallback EFI 会盖过 ZBM)
     awk '/^[[:space:]]*-[[:space:]]*bootloader[[:space:]]*$/{b=NR} /^[[:space:]]*-[[:space:]]*shellprocess@zfs[[:space:]]*$/{z=NR} END{exit !(b&&z&&z>b)}' "${CSGSET}" \
         || { echo "[99-sanitize] 致命:settings.conf 中 shellprocess@zfs 未排在 bootloader 之后 → GRUB fallback 会盖过 ZBM,中止"; exit 1; }
+    # shellprocess@zfspre 必须接在 bootloader 之前:它中和 grub-install。缺了它,ZFS 根上 grub-install 退 1、
+    # Calamares 在 bootloader 步就中止,后面 shellprocess@zfs 的整个 ZBM 安装根本不会跑 → 出不可启动盘。
+    grep -qE '^[[:space:]]*-[[:space:]]*shellprocess@zfspre[[:space:]]*$' "${CSGSET}" 2>/dev/null \
+        || { echo "[99-sanitize] 致命:settings.conf 未接 shellprocess@zfspre → ZFS 根装机 grub-install 会中止,中止"; exit 1; }
+    awk '/^[[:space:]]*-[[:space:]]*shellprocess@zfspre[[:space:]]*$/{p=NR} /^[[:space:]]*-[[:space:]]*bootloader[[:space:]]*$/{b=NR} END{exit !(p&&b&&p<b)}' "${CSGSET}" \
+        || { echo "[99-sanitize] 致命:settings.conf 中 shellprocess@zfspre 未排在 bootloader 之前 → grub-install 会中止 ZFS 根装机,中止"; exit 1; }
     test -f "${SQROOT}/etc/zfsbootmenu/config.yaml" \
         || { echo "[99-sanitize] 致命:缺 /etc/zfsbootmenu/config.yaml → generate-zbm 无法产单文件 EFI,中止"; exit 1; }
     grep -qE '^[[:space:]]*Enabled:[[:space:]]*true' "${SQROOT}/etc/zfsbootmenu/config.yaml" \

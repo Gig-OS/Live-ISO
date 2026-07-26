@@ -3,6 +3,7 @@ CFLAGS="${COMMON_FLAGS}"
 CXXFLAGS="${COMMON_FLAGS}"
 FCFLAGS="${COMMON_FLAGS}"
 FFLAGS="${COMMON_FLAGS}"
+# MAKEOPTS 构建时由 refreshconfig() 按构建机重写、开机后由 gigos-cpuflags 按真机内存/核数覆盖;此处仅手动构建的兜底占位。
 MAKEOPTS="-j32"
 
 # Python 跟随 profile 默认(2026 树 = python3_14):calamares 已改用 gig overlay 的

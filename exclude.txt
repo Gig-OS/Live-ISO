@@ -18,4 +18,3 @@ etc/portage/package.use/calamares
 etc/portage/package.env
 etc/portage/env
 etc/portage/make.conf/zz-buildhost
-etc/portage/make.conf/zz-loadavg

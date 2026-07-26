@@ -25,6 +25,6 @@ Please go to [mirror.gentoozh.org](https://mirror.gentoozh.org/) and download th
 
 # Tips
 
-change `TMPFS` suitable size for you in `build.sh` to speedup package building
+change `TMPFS` suitable size for you in `config` to speedup package building
 
 modify `include-squashfs/etc/portage/make.conf/common` according to your needs
