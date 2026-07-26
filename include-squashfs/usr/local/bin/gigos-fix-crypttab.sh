@@ -5,7 +5,7 @@
 # 背景:加密根由 initramfs 解锁(kernel cmdline rd.luks.uuid + 内建 keyfile),但真实根 systemd 不知它
 #   已被 initrd 挂接,死等其 .device 单元 →「A start job is running for /dev/.../<uuid> (no limit)」。
 # 解法(贴合 systemd crypttab(5)):给「由 initramfs 解锁的设备」(挂载 / 或 /usr 的加密卷)的 crypttab
-#   条目加 x-initrd.attach;非 root(/home /data 等,pivot 后才解、无 rd.luks.uuid)不加——加了会被
+#   条目加 x-initrd.attach;非 root(/home /data 等,pivot 后才解、无 rd.luks.uuid)不加,加了会被
 #   dracut 拽进 initramfs 早期、却无内建 keyfile,反而要密码/卡。
 # root 判据:从 /etc/fstab 取挂载 / 和 /usr 的设备 /dev/mapper/luks-<UUID>,匹配 crypttab 同 UUID 的行。
 #   不能按 keyfile 字段判:gig 的 Calamares fstab 模块早于 luksbootkeyfile 跑,root 的密钥字段写成 none。

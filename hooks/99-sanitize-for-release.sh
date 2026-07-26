@@ -11,7 +11,7 @@
 
 MC="${WORKDIR}/squashfs/etc/portage/make.conf"
 
-# ① MAKEOPTS 还原为安全兜底字面量 -j4。
+# 1. MAKEOPTS 还原为安全兜底字面量 -j4。
 #    切勿写 $(nproc):portage 的 make.conf 解析器【不支持】命令替换,会每次 emerge
 #    报 "line N: $: bad substitution" 且 MAKEOPTS 失效。真正的按 CPU 自适应由开机的
 #    gigos-cpuflags.service 写进 make.conf.d/cpuflags(字母序在 common 之后覆盖此值);
@@ -20,7 +20,7 @@ if [ -f "${MC}/common" ]; then
     sed -i 's/^MAKEOPTS=.*/MAKEOPTS="-j4"/' "${MC}/common"
 fi
 
-# ② 移除任何构建机专用的二进制包缓存调优（若构建包装层注入过）。
+# 2. 移除任何构建机专用的二进制包缓存调优（若构建包装层注入过）。
 #    删整文件命中的 EMERGE_DEFAULT_OPTS / FEATURES 注入片段，再逐文件擦关键字。
 rm -f "${MC}"/zz-buildhost
 if [ -d "${MC}" ]; then
@@ -30,17 +30,17 @@ if [ -d "${MC}" ]; then
         done
 fi
 
-# ②.5 清掉 @world 的 --autounmask-continue 在构建期写的 zz-autounmask(USE / keyword / mask pin)。
+# 2.5 清掉 @world 的 --autounmask-continue 在构建期写的 zz-autounmask(USE / keyword / mask pin)。
 #     CONFIG_PROTECT="-*" 下这些直接落进系统树,是构建期滚动树漂移的产物,不应随 ISO 发给用户。
 PRT="${WORKDIR}/squashfs/etc/portage"
 rm -f "${PRT}/package.use/zz-autounmask" "${PRT}/package.accept_keywords/zz-autounmask" \
       "${PRT}/package.mask/zz-autounmask" "${PRT}/package.license/zz-autounmask" 2>/dev/null || true
 
-# ③ CPU_FLAGS_X86 必须按【用户的】CPU 生成，不能用构建机的固定值。
+# 3. CPU_FLAGS_X86 必须按【用户的】CPU 生成，不能用构建机的固定值。
 #    Calamares 装机是把本 live squashfs 整盘复制到用户硬盘，所以这里的
 #    make.conf 会原样成为用户系统的配置。若保留构建机的 CPU_FLAGS_X86
 #    （如含 avx2），用户 CPU 若不支持，后续 emerge 编译出的包会在运行时
-#    SIGILL 崩溃——这正是"第三方 live 装完不兼容/损坏系统"的典型成因。
+#    SIGILL 崩溃,这正是"第三方 live 装完不兼容/损坏系统"的典型成因。
 #    出厂策略改为「带标记的安全基线 + 开机自适应服务」:cpuflags 写 x86-64-v3 基线并加
 #    gigos-auto-cpuflags 标记,gigos-cpuflags.service 在 live 与装好的系统【每次启动】按
 #    真机 CPU(cpuid2cpuflags,见 world)覆盖之(用户删标记即停)。比旧的"手动占位"开箱即用。
@@ -56,20 +56,20 @@ cat > "${MC}/cpuflags" <<'CPUF'
 CPU_FLAGS_X86="aes avx avx2 f16c fma3 mmx mmxext pclmul popcnt rdrand sse sse2 sse3 sse4_1 sse4_2 ssse3"
 CPUF
 
-# ④ 出厂 GENTOO_MIRRORS：写带标记的【基线】(中国大陆)。开机后 gigos-mirror.service 按系统语言
-#    自动选就近镜像(简→大陆 / 繁→台港 / 英→全球)——我们支持简/繁/英三语,写死单一中国镜像对
+# 4. 出厂 GENTOO_MIRRORS：写带标记的【基线】(中国大陆)。开机后 gigos-mirror.service 按系统语言
+#    自动选就近镜像(简→大陆 / 繁→台港 / 英→全球),我们支持简/繁/英三语,写死单一中国镜像对
 #    繁体、海外用户不友好,故改成「基线 + 按语言自适应」,与 gigos-cpuflags 同套机制。
 #    第一行的标记让 gigos-mirror 知道这是自动值、可覆盖;用户删掉标记即固定为自己的值。
-#    注意：这与【构建时】用的源无关——构建机在香港直连官方源(见 build-and-deploy.sh / config)。
+#    注意：这与【构建时】用的源无关,构建机在香港直连官方源(见 build-and-deploy.sh / config)。
 {
     echo '# gigos-auto-mirror'
     echo '# 出厂基线(中国大陆);开机后 gigos-mirror.service 按系统语言覆盖。删除本行标记即停止自动覆盖。'
     echo 'GENTOO_MIRRORS="https://mirrors.aliyun.com/gentoo/ https://mirrors.tuna.tsinghua.edu.cn/gentoo/ https://mirrors.ustc.edu.cn/gentoo/ https://mirrors.bfsu.edu.cn/gentoo/"'
 } > "${MC}/mirror"
 
-# ⑤ 解除 nvidia.conf 对 nouveau 的【静态】黑名单,让双驱动共存。
+# 5. 解除 nvidia.conf 对 nouveau 的【静态】黑名单,让双驱动共存。
 #    nvidia-drivers ebuild 自带 /etc/modprobe.d/nvidia.conf,首行 `blacklist nouveau`
-#    会让整个系统(含 live)永远走不了 nouveau——这跟我们「grub 默认 nouveau、
+#    会让整个系统(含 live)永远走不了 nouveau,这跟我们「grub 默认 nouveau、
 #    选闭源项才上 nvidia」的双驱动设计直接冲突(选默认项 nouveau 也起不来)。
 #    出厂注释掉这两行(ebuild 文件里明说可注释),改由 grub 内核参数动态切换:
 #      - 默认/nouveau 项:无 blacklist → nouveau 加载
@@ -80,14 +80,14 @@ if [ -f "${NVCONF}" ]; then
     sed -i 's/^blacklist nouveau/#blacklist nouveau/; s/^blacklist nova_core/#blacklist nova_core/' "${NVCONF}"
 fi
 
-# ⑥ 兜底清空二进制包 / 源码缓存（exclude.txt 也会排除，这里双保险；
+# 6. 兜底清空二进制包 / 源码缓存（exclude.txt 也会排除，这里双保险；
 #    用 find -delete 而非 glob，空目录/不同 shell 下都可靠）。
 for d in binpkgs distfiles; do
     find "${WORKDIR}/squashfs/var/cache/${d}" -mindepth 1 -delete 2>/dev/null || true
 done
 
-# ⑦ 安全断言:装机后清理 live 残留(autologin / SSH 密码登录 / 桌面调试按钮 / polkit 免密)全靠
-#    calamares-settings-gig 的 shellprocess。打包前在此强校验契约确已接通——否则一旦指向 fork 失败
+# 7. 安全断言:装机后清理 live 残留(autologin / SSH 密码登录 / 桌面调试按钮 / polkit 免密)全靠
+#    calamares-settings-gig 的 shellprocess。打包前在此强校验契约确已接通,否则一旦指向 fork 失败
 #    或被上游覆盖,会出「装好的系统残留 autologin / SSH 密码登录」的后门盘。任一缺失即中止,不出后门盘。
 CSGSP="${WORKDIR}/squashfs/etc/calamares/modules/shellprocess.conf"
 CSGSET="${WORKDIR}/squashfs/etc/calamares/settings.conf"
@@ -97,7 +97,7 @@ done
 grep -qE '^[[:space:]]*-[[:space:]]*shellprocess[[:space:]]*$' "${CSGSET}" 2>/dev/null || { echo "[99-sanitize] 致命:calamares settings.conf 未启用 shellprocess 清理步骤(清理不会跑)→ 中止"; exit 1; }
 echo "[99-sanitize] 安全断言通过:装机清理契约已接(autologin / SSH 密码登录 / polkit 残留会被 calamares 删除)"
 
-# ⑦.5 settings.conf 排的每个模块,calamares 里都得真有。calamares 大版本会增删模块(3.3→3.4 就换过一轮),
+# 7.5 settings.conf 排的每个模块,calamares 里都得真有。calamares 大版本会增删模块(3.3→3.4 就换过一轮),
 #      而 settings 是我们 fork 自己维护的:一旦排了个新版没有的模块,构建期一切正常、装机跑到那步才炸。
 #      这里在出锅前静态比对「settings.conf 的 sequence」vs「已装的 calamares 模块目录」,不匹配就中止。
 CALMODDIR=""
@@ -120,7 +120,7 @@ else
     echo "[99-sanitize] 提示:未找到 calamares 模块目录或 settings.conf,跳过模块比对"
 fi
 
-# ⑧ ZFS 根装机契约断言。仅当本锅【确实装上了 ZBM 工具】(generate-zbm 在 squashfs 内)才强校验——
+# 8. ZFS 根装机契约断言。仅当本锅【确实装上了 ZBM 工具】(generate-zbm 在 squashfs 内)才强校验,
 #    这样 --keep-going 下若 guru 偶发使 zfsbootmenu 被跳过,非 ZFS 盘照常出;但凡装了 ZBM,就必须保证
 #    装机后处理脚本在位、settings 已接 shellprocess@zfs、且 ZBM config 启用了单文件 EFI,否则 ZFS 根装出
 #    不可启动盘。任一缺失即中止。
