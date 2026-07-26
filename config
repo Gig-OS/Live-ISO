@@ -27,7 +27,7 @@ OVERLAYS=(
     "guru|https://github.com/gentoo-mirror/guru.git"
 )
 # 把 calamares-settings-gig 的 9999 ebuild 指向这个 fork（带装机清理 / nvidia 自动配）。
-: "${CSG_FORK_URL:=https://github.com/Gentoo-zh/calamares-settings-gig.git}"
+: "${CSG_FORK_URL:=https://github.com/Gig-OS/calamares-settings-gig.git}"
 # @world 后显式补装的包（@world 回溯可能丢、显式参数不会）。
 EXTRA_PKGS=(
     app-admin/calamares-settings-gig

@@ -21,7 +21,7 @@ if [ -f "${_osrel_src}" ]; then
     cat >> "${_osrel_tmp}" <<'OSRELEOF'
 HOME_URL='https://gentoozh.org/'
 SUPPORT_URL='https://forum.gentoozh.org/'
-BUG_REPORT_URL='https://github.com/gentoo-zh/Live-ISO/issues'
+BUG_REPORT_URL='https://github.com/Gig-OS/Live-ISO/issues'
 DOCUMENTATION_URL='https://gentoozh.org/'
 OSRELEOF
     rm -f "${_osrel_dst}"
