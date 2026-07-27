@@ -1,5 +1,5 @@
 #!/bin/bash
-# gigos-zfs-prebootloader.sh — 装机时在 Calamares 的 grubcfg/bootloader 模块【之前】跑
+# gigos-zfs-prebootloader.sh — 装机时在 Calamares 的 grubcfg/bootloader 模块之前跑
 # (shellprocess@zfspre,目标 chroot 内,dontChroot:false → ROOT=/)。仅 ZFS 根触发。
 #
 # 为什么需要:ZFS 根安装时,Calamares 的 bootloader 模块仍会跑 `grub-install`,但 GRUB 读不了
@@ -23,7 +23,7 @@ for t in grub-install grub-mkconfig; do
     [ -e "${r}.gigos-real" ] && continue   # 幂等:已中和则跳过
     mv "$r" "${r}.gigos-real" || continue
     if [ "$t" = grub-install ]; then
-        # grub-install:no-op 不够。Calamares bootloader 模块跑完 grub-install 后会【无条件】
+        # grub-install:no-op 不够。Calamares bootloader 模块跑完 grub-install 后会无条件
         # copy2 grubx64.efi → 回退 bootx64.efi(installEFIFallback,默认开),源文件不在就
         # FileNotFoundError 崩(run() 只 catch CalledProcessError,catch 不到它)。故 stub 解析
         # --efi-directory/--bootloader-id/--target,在 bootloader 模块要 copy 的路径造个空占位

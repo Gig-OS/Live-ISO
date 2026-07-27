@@ -246,7 +246,7 @@ cp --dereference /etc/resolv.conf "${WORKDIR}/squashfs"/etc/
 
 syncrepo
 
-# [gigos] 动态钉最新 amd64-stable 工具链(gcc)+ 内核 + zfs,必须放在【任何 emerge 之前】:下面 portage/git
+# [gigos] 动态钉最新 amd64-stable 工具链(gcc)+ 内核 + zfs,必须放在任何 emerge 之前:下面 portage/git
 # 升级会用 -D 拖来 gcc,晚了 gcc-16 快照就先装进来了。全局 ACCEPT_KEYWORDS="~amd64 *" 默认挑最新测试版
 # (实机踩过:内核 7.1.3 超 OpenZFS 上限、zfs-2.4.3 拖 RC 模块、gcc-16 快照把 btrfs-progs 编挂)。从刚同步好的
 # 树的 md5-cache 精确读各自最新 amd64-stable 版本(newest_stable,不靠 ACCEPT_KEYWORDS,它是增量变量、会跟
@@ -254,7 +254,7 @@ syncrepo
 # 上限、zfs=zfs-kmod 同版本)由 99-sanitize 出锅前硬断言兜底。改钉版策略就改这一段。
 GSTAB=$(newest_stable sys-devel/gcc)
 KSTAB=$(newest_stable sys-kernel/gentoo-kernel-bin)
-# ZFS 有两种形态,这里【自动判别】,免得上游一变就要手改:
+# ZFS 有两种形态,这里自动判别,免得上游一变就要手改:
 #   - 新(>=2.4.1):上游把 zfs-kmod 合并进 sys-fs/zfs(ebuild 里 MODULES_OPTIONAL_IUSE=+modules + linux-mod-r1),
 #     一个包出用户态和 zfs.ko;zfs-kmod 那边最新 stable 停在 2.3.6、2.4.0_rc2-r1 连 KEYWORDS 都空了。
 #   - 旧(<=2.3.8):zfs + zfs-kmod 两个包,必须同版本。
@@ -280,7 +280,7 @@ mkdir -p "${WORKDIR}/squashfs/etc/portage/package.mask"
 cat > "${WORKDIR}/squashfs/etc/portage/package.mask/kernel-zfs" <<MASKEOF
 # 本文件由 build.sh 每锅动态生成:钉最新 amd64-stable gcc + 内核 + zfs,免手工维护(改法见 build.sh 生成它那段)。
 # 本锅算得:gcc ${GSTAB}、内核 ${KSTAB}、zfs ${ZSTAB}。mask 掉算出的 stable 版之上的测试版,portage 停在 stable。
-# vanilla-kernel 必须一起 mask:sys-fs/zfs[dist-kernel] 依赖【无版本】的 virtual/dist-kernel,-uD @world 会挑
+# vanilla-kernel 必须一起 mask:sys-fs/zfs[dist-kernel] 依赖无版本的 virtual/dist-kernel,-uD @world 会挑
 # 版本最高的 provider 来满足它。gentoo-kernel-bin 钉在 ${KSTAB} 了,但 vanilla-kernel 没钉 → 实机上被拖来
 # vanilla-kernel-7.1.3(装出第二个内核 /lib/modules/7.1.3-dist),它超 OpenZFS 上限、没 zfs.ko,被 99-sanitize
 # 逮住中止。把 vanilla-kernel 也钉到 ${KSTAB},virtual/dist-kernel 就只能落到 gentoo-kernel-bin-${KSTAB}(world 里已有)。

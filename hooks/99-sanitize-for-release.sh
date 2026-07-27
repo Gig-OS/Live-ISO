@@ -1,7 +1,7 @@
 #!/bin/bash
 # 出厂安全清理（在 makesquashfs 之前由 build.sh source 执行）
 #
-# 构建过程中，build.sh 的 refreshconfig() 会把【构建机的】MAKEOPTS 写进系统树的
+# 构建过程中，build.sh 的 refreshconfig() 会把构建机的 MAKEOPTS 写进系统树的
 # make.conf（例如 -j32 / -j76），若不还原，最终用户（可能只有 2-4 核、4-8G 内存）
 # 开机后 emerge 编译大包会内存超订甚至 OOM。此外构建若注入了二进制包缓存类调优
 # （FEATURES=buildpkg、EMERGE_DEFAULT_OPTS 的 --usepkg/--buildpkg），也不应随 ISO
@@ -12,7 +12,7 @@
 MC="${WORKDIR}/squashfs/etc/portage/make.conf"
 
 # 1. MAKEOPTS 还原为安全兜底字面量 -j4。
-#    切勿写 $(nproc):portage 的 make.conf 解析器【不支持】命令替换,会每次 emerge
+#    切勿写 $(nproc):portage 的 make.conf 解析器不支持命令替换,会每次 emerge
 #    报 "line N: $: bad substitution" 且 MAKEOPTS 失效。真正的按 CPU 自适应由开机的
 #    gigos-cpuflags.service 写进 make.conf.d/cpuflags(字母序在 common 之后覆盖此值);
 #    -j4 仅是首启动前/服务未跑时的安全兜底(小内存机也不致 OOM)。
@@ -36,13 +36,13 @@ PRT="${WORKDIR}/squashfs/etc/portage"
 rm -f "${PRT}/package.use/zz-autounmask" "${PRT}/package.accept_keywords/zz-autounmask" \
       "${PRT}/package.mask/zz-autounmask" "${PRT}/package.license/zz-autounmask" 2>/dev/null || true
 
-# 3. CPU_FLAGS_X86 必须按【用户的】CPU 生成，不能用构建机的固定值。
+# 3. CPU_FLAGS_X86 必须按用户的 CPU 生成，不能用构建机的固定值。
 #    Calamares 装机是把本 live squashfs 整盘复制到用户硬盘，所以这里的
 #    make.conf 会原样成为用户系统的配置。若保留构建机的 CPU_FLAGS_X86
 #    （如含 avx2），用户 CPU 若不支持，后续 emerge 编译出的包会在运行时
 #    SIGILL 崩溃,这正是"第三方 live 装完不兼容/损坏系统"的典型成因。
 #    出厂策略改为带标记的安全基线加开机自适应服务:cpuflags 写 x86-64-v3 基线并加
-#    gigos-auto-cpuflags 标记,gigos-cpuflags.service 在 live 与装好的系统【每次启动】按
+#    gigos-auto-cpuflags 标记,gigos-cpuflags.service 在 live 与装好的系统每次启动按
 #    真机 CPU(cpuid2cpuflags,见 world)覆盖之(用户删标记即停)。比旧的"手动占位"开箱即用。
 #    这里先清掉其它文件里可能残留的 CPU_FLAGS_X86,再把 cpuflags 归一成标记加基线
 #    (与 include-squashfs 的同名文件一致,幂等)。
@@ -56,18 +56,18 @@ cat > "${MC}/cpuflags" <<'CPUF'
 CPU_FLAGS_X86="aes avx avx2 f16c fma3 mmx mmxext pclmul popcnt rdrand sse sse2 sse3 sse4_1 sse4_2 ssse3"
 CPUF
 
-# 4. 出厂 GENTOO_MIRRORS：写带标记的【基线】(中国大陆)。开机后 gigos-mirror.service 按系统语言
+# 4. 出厂 GENTOO_MIRRORS：写带标记的基线(中国大陆)。开机后 gigos-mirror.service 按系统语言
 #    自动选就近镜像(简→大陆 / 繁→台港 / 英→全球),我们支持简/繁/英三语,写死单一中国镜像对
 #    繁体、海外用户不友好,故改成基线加按语言自适应,与 gigos-cpuflags 同套机制。
 #    第一行的标记让 gigos-mirror 知道这是自动值、可覆盖;用户删掉标记即固定为自己的值。
-#    注意：这与【构建时】用的源无关,构建机在香港直连官方源(见 build-and-deploy.sh / config)。
+#    注意：这与构建时用的源无关,构建机在香港直连官方源(见 build-and-deploy.sh / config)。
 {
     echo '# gigos-auto-mirror'
     echo '# 出厂基线(中国大陆);开机后 gigos-mirror.service 按系统语言覆盖。删除本行标记即停止自动覆盖。'
     echo 'GENTOO_MIRRORS="https://mirrors.aliyun.com/gentoo/ https://mirrors.tuna.tsinghua.edu.cn/gentoo/ https://mirrors.ustc.edu.cn/gentoo/ https://mirrors.bfsu.edu.cn/gentoo/"'
 } > "${MC}/mirror"
 
-# 5. 解除 nvidia.conf 对 nouveau 的【静态】黑名单,让双驱动共存。
+# 5. 解除 nvidia.conf 对 nouveau 的静态黑名单,让双驱动共存。
 #    nvidia-drivers ebuild 自带 /etc/modprobe.d/nvidia.conf,首行 `blacklist nouveau`
 #    会让整个系统(含 live)永远走不了 nouveau,这跟我们grub 默认 nouveau、
 #    选闭源项才上 nvidia的双驱动设计直接冲突(选默认项 nouveau 也起不来)。
@@ -120,7 +120,7 @@ else
     echo "[99-sanitize] 提示:未找到 calamares 模块目录或 settings.conf,跳过模块比对"
 fi
 
-# 8. ZFS 根装机契约断言。仅当本锅【确实装上了 ZBM 工具】(generate-zbm 在 squashfs 内)才强校验,
+# 8. ZFS 根装机契约断言。仅当本锅确实装上了 ZBM 工具(generate-zbm 在 squashfs 内)才强校验,
 #    这样 --keep-going 下若 guru 偶发使 zfsbootmenu 被跳过,非 ZFS 盘照常出;但凡装了 ZBM,就必须保证
 #    装机后处理脚本在位、settings 已接 shellprocess@zfs、且 ZBM config 启用了单文件 EFI,否则 ZFS 根装出
 #    不可启动盘。任一缺失即中止。
@@ -155,7 +155,7 @@ if [ -x "${SQROOT}/usr/bin/generate-zbm" ] || [ -x "${SQROOT}/usr/sbin/generate-
         || echo "[99-sanitize] 提示:${KMODVER} 有 zfs.ko 但无独立 spl.ko(较新 OpenZFS 把 spl 并进 zfs.ko,正常)"
     # userland 与内核模块必须同版本(版本不齐 ZFS 就不能用,单查 zfs.ko 在不在会漏掉)。
     # 上游 >=2.4.1 起把 kmod 合并进 sys-fs/zfs(USE 里带 modules),一个包出用户态和模块、天然同版本,
-    # 此时【没有】独立的 sys-fs/zfs-kmod,再拿它比对会把好锅误判成致命。故按已装 zfs 的 USE 自动分流。
+    # 此时没有独立的 sys-fs/zfs-kmod,再拿它比对会把好锅误判成致命。故按已装 zfs 的 USE 自动分流。
     ZV=$(ls -d "${SQROOT}"/var/db/pkg/sys-fs/zfs-[0-9]* 2>/dev/null | head -1 | sed -E 's#.*/zfs-##')
     ZKV=$(ls -d "${SQROOT}"/var/db/pkg/sys-fs/zfs-kmod-[0-9]* 2>/dev/null | head -1 | sed -E 's#.*/zfs-kmod-##')
     ZUSE=" $(cat "${SQROOT}"/var/db/pkg/sys-fs/zfs-[0-9]*/USE 2>/dev/null | head -1) "

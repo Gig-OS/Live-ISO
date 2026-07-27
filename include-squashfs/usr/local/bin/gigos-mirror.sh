@@ -12,7 +12,7 @@ set -u
 F=/etc/portage/make.conf/mirror
 MARK='# gigos-auto-mirror'
 
-# 文件存在且【没有】自动标记 = 用户已手改 → 不动它
+# 文件存在且没有自动标记 = 用户已手改 → 不动它
 if [ -e "$F" ] && ! grep -q "$MARK" "$F"; then
     exit 0
 fi

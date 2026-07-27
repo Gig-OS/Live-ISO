@@ -20,7 +20,7 @@ crun systemctl enable sddm
 # PipeWire 音频栈(per-user,用 --global 给所有用户建 user-unit 软链)。
 # 默认未使能时 live 桌面进去就是`声卡服务连接丧失`/无声;wireplumber 是会话管理器,
 # pipewire-pulse 提供 PulseAudio 兼容(KDE 音量控件走它)。三者必须一起 enable。
-# 注:装好的系统同样需要声音 → 故意【不】放进 calamares 清理(它只删 live 专属残留)。
+# 注:装好的系统同样需要声音 → 故意不放进 calamares 清理(它只删 live 专属残留)。
 crun systemctl --global enable pipewire.socket pipewire-pulse.socket wireplumber.service
 
 # Live 开机语言切换(读 gigos.lang= 内核参数,在 sddm 前设 locale/Plasma 语言)
@@ -59,7 +59,7 @@ chmod +x "${WORKDIR}/squashfs/usr/local/bin/gigos-sudo.sh" "${WORKDIR}/squashfs/
 chmod 0755 "${WORKDIR}/squashfs/etc/skel/Desktop/gigos-sudo-nopasswd.desktop"
 
 # ZFS 根装机处理脚本(由 calamares shellprocess@zfspre / @zfs 在目标 chroot 内调用)设可执行。
-# 注:这【不】是 live systemd 服务(无 systemctl enable),仅装机时被 Calamares 调用,同 gigos-fix-crypttab.sh。
+# 注:这不是 live systemd 服务(无 systemctl enable),仅装机时被 Calamares 调用,同 gigos-fix-crypttab.sh。
 chmod +x "${WORKDIR}/squashfs/usr/local/bin/gigos-zfs-bootmenu.sh"
 chmod +x "${WORKDIR}/squashfs/usr/local/bin/gigos-zfs-prebootloader.sh"
 # LUKS 加密根装机开机卡死修复脚本(calamares shellprocess 用 test -x 调,丢了 exec 位会静默不跑)。

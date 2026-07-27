@@ -5,7 +5,7 @@
 # 为什么不用 GRUB:GRUB 的 ZFS 读取依赖 feature-flag 白名单,新池特性(尤其原生加密)会让
 #   GRUB 拒读 → 装好的系统开不了机。决策(多发行版调研后已定):ZFS 根一律走 ZFSBootMenu,
 #   ext4/xfs/btrfs/LUKS 仍走 GRUB。settings.conf 里 grubcfg/bootloader 仍在序列(为非 ZFS 安装),
-#   但本步【接在 bootloader 之后】:ZFS 根时主动拆掉 GRUB 在 ESP/NVRAM 留下的引导物、再装 ZBM,
+#   但本步接在 bootloader 之后:ZFS 根时主动拆掉 GRUB 在 ESP/NVRAM 留下的引导物、再装 ZBM,
 #   保证最终固件跑的是 ZBM 而非读不了池的 GRUB(见下面拆除 GRUB 的段落,修复 fallback 互踩)。
 #
 # 整体顺序(被 Calamares 调用时,前置模块已完成):partition 写 zfsInfo → zfs(ZfsJob)建池/数据集
@@ -17,7 +17,7 @@
 #   1. hostid:zpool 记住建池时的 hostid;目标必须用同一 hostid 才能 import。zfshostid 已拷 hostid,
 #      仍显式校验/补建,并把 /etc/hostid 注入目标 initramfs(dracut install_items),否则首启 import 失败。
 #   2. 首启导入靠 hostid + import-scan(不烘焙可能受 altroot 污染的 zpool.cache;见下面关于 cache 的段落)。
-#   3. 原生加密:把根改成 keyfile 解锁(keyfile 只进【目标 initramfs】,不进 ZBM),并让 ZBM 仍在菜单
+#   3. 原生加密:把根改成 keyfile 解锁(keyfile 只进目标 initramfs,不进 ZBM),并让 ZBM 仍在菜单
 #      处提示一次口令(keysource),避免 ZBM 解锁后目标 initramfs 再问一次的双重提示。
 #   4. ZFSBootMenu EFI:用 generate-zbm 生成单文件 UEFI 可执行、装进 ESP、efibootmgr 建项、置 bootfs。
 # 一次性安装器助手,执行后自删,不进装好的系统。
@@ -72,7 +72,7 @@ command -v zgenhostid >/dev/null 2>&1 && zgenhostid 2>/dev/null || true
 
 # ── 3 原生加密:保留 keyformat=passphrase + keylocation=prompt(ZfsJob 勾选加密时所设)──
 # 由 ZFSBootMenu 在菜单处提示口令解锁。QEMU 实测:ZBM 能导入加密池、解锁、kexec 一路进 KDE 桌面。
-# 【不要】像旧版那样 change-key 成 raw keyfile:那样 keyfile 落在加密根内、ZBM 解锁前读不到,raw 又无法
+# 不要像旧版那样 change-key 成 raw keyfile:那样 keyfile 落在加密根内、ZBM 解锁前读不到,raw 又无法
 # 在 ZBM 处提示输入 → ZBM 根本解不开加密根、开不了机(已实测会炸)。保留 passphrase 让 ZBM 直接 prompt
 # 才是可行解。(若目标 initramfs 出现第二次口令提示,属可接受的小瑕疵;实测本路径未阻塞引导。)
 ZFS_KEYFILE=""
@@ -89,7 +89,7 @@ mkdir -p /etc/dracut.conf.d
     echo "# 不烘 zpool.cache:它在 Calamares 的 altroot(-R /)导入下生成,可能污染;改用 import-scan。"
     echo 'add_dracutmodules+=" zfs "'
     if [ -n "${ZFS_KEYFILE}" ]; then
-        echo "# 原生加密 keyfile:仅嵌入【目标】initramfs,使首启静默解锁、不二次提示口令(口令在 ZBM 输一次)。"
+        echo "# 原生加密 keyfile:仅嵌入目标 initramfs,使首启静默解锁、不二次提示口令(口令在 ZBM 输一次)。"
         echo "install_items+=\" /etc/hostid ${ZFS_KEYFILE} \""
     else
         echo 'install_items+=" /etc/hostid "'
@@ -108,7 +108,7 @@ zfs set org.zfsbootmenu:commandline="rw quiet" "${ROOTDS}" 2>/dev/null || true
 
 # ── 重建目标 initramfs,纳入上面的 hostid/keyfile 配置 ──
 # dist-kernel:dracut --regenerate-all 覆盖所有已装内核;含可能的 keyfile 故给足超时(见 .conf timeout)。
-# 必须在 generate-zbm 之前:ZBM 也用 dracut 生成自己的镜像,但 ZBM 镜像【不】含目标 keyfile(keyfile
+# 必须在 generate-zbm 之前:ZBM 也用 dracut 生成自己的镜像,但 ZBM 镜像不含目标 keyfile(keyfile
 # 只在目标 /etc/dracut.conf.d,ZBM 用自己的 /etc/zfsbootmenu/dracut.conf.d),互不污染。
 command -v dracut >/dev/null 2>&1 && dracut --force --regenerate-all || \
     echo "[gigos-zbm] 警告:dracut 重建失败,首启可能需在 ZBM 手动 import"
@@ -116,7 +116,7 @@ command -v dracut >/dev/null 2>&1 && dracut --force --regenerate-all || \
 # ── 4 ZFSBootMenu EFI:generate-zbm 生成单文件 UEFI 可执行,装进 ESP ──
 # guru 的 sys-boot/zfsbootmenu 不预装 *.EFI(只装 perl 脚本 + generate-zbm),故必须现场生成。
 # 单文件 EFI 需 EFI stub(linuxx64.efi.stub,来自 sys-apps/systemd[boot])与 EFI.Enabled:true 的 config。
-# 【关键】这里在目标内【就地写】config.yaml:不靠 include-squashfs 投放,那个会和 sys-boot/zfsbootmenu
+# 关键:这里在目标内就地写 config.yaml:不靠 include-squashfs 投放,那个会和 sys-boot/zfsbootmenu
 # 包自带的 /etc/zfsbootmenu/config.yaml(EFI.Enabled:false 默认)冲突、被包覆盖 → 只出 Components 散件、
 # 无单文件 EFI → ZFS 根开不了机(实测冲突包默认版会赢)。在此(generate-zbm 之前)落地为准,杜绝冲突。
 mkdir -p /etc/zfsbootmenu/dracut.conf.d /etc/zfsbootmenu/generate-zbm.pre.d /etc/zfsbootmenu/generate-zbm.post.d
