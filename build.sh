@@ -308,6 +308,14 @@ retry crun FEATURES="-merge-sync" emerge -vu1q --jobs "${CORES}" portage
 if ( ! crun which git);then
     crun CONFIG_PROTECT="-*" emerge -vuDq --jobs "${CORES}" --autounmask-continue --autounmask-keep-masks=y dev-vcs/git || exit 1
 fi
+
+# 因为上面这步是 -uD 深度升级,dev-lang/perl 常在此升到新的大版本,而旧版本目录下的 perl 模块
+# 对新 perl 不可见,后续任何依赖它们的构建工具都会失败:help2man 需要 Locale::gettext,取不到就让
+# app-crypt/sbsigntools(gentoo-kernel-bin 的 secureboot 依赖)在生成 man 页时编译失败,整锅中止。
+# 所以在这里、也就是后面所有 emerge 之前,先按新 perl 重建一次模块。没有可重建的时它很快退出。
+crun "command -v perl-cleaner >/dev/null 2>&1 || emerge -1q app-admin/perl-cleaner" || true
+crun "perl-cleaner --all -- --jobs ${CORES} -q" || true
+
 syncrepo
 
 # sync full extra staff
@@ -371,8 +379,8 @@ WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"
 # 用它生成 man 页的包编译失败,--keep-going 下最终 emerge 仍返回非零、整锅中止。
 # 所以第一次 @world 不成时先跑 perl-cleaner 把 perl 模块按新版本重建,再重试。
 if ! crun "${WORLD_EMERGE}"; then
-    echo "[gigos] @world 未全部成功,先用 perl-cleaner 重建 perl 模块再重试"
-    crun "command -v perl-cleaner >/dev/null 2>&1 || emerge -1q app-admin/perl-cleaner" || true
+    # @world 期间也可能再次升级 perl,所以失败后再重建一次模块并重试。
+    echo "[gigos] @world 未全部成功,重建 perl 模块后重试"
     crun "perl-cleaner --all -- --jobs ${CORES} -q" || true
     retry crun "${WORLD_EMERGE}" || exit 1
 fi
