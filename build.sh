@@ -365,7 +365,17 @@ crun sh -c 'O=/usr/src/linux/tools/objtool/objtool; if [ -e "$O" ]; then "$O" >/
 # FEATURES="-merge-sync" 理由同 portage 升级处。autounmask 自愈滚动树的 USE / 关键字漂移;但 python
 # 目标迁移期(官方 stage3 种子仍带 3.13)那串 @system 构建后端的 3_13 桥接,portage 回溯收敛不了
 # (试过 --autounmask-backtrack=y + --backtrack=300 仍早退),改由 package.use/python-transition 显式给足 USE。
-retry crun CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs "${CORES}" --keep-going --autounmask-continue --autounmask-keep-masks=y @world || exit 1
+WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"${CORES}"' --keep-going --autounmask-continue --autounmask-keep-masks=y @world'
+# 因为 dev-lang/perl 是在本次 @world 中途升级的,升级后旧 perl 版本目录下的模块对新 perl 不可见,
+# 依赖它们的构建工具会失败:help2man 需要 Locale::gettext,取不到就让 app-crypt/sbsigntools 这类
+# 用它生成 man 页的包编译失败,--keep-going 下最终 emerge 仍返回非零、整锅中止。
+# 所以第一次 @world 不成时先跑 perl-cleaner 把 perl 模块按新版本重建,再重试。
+if ! crun "${WORLD_EMERGE}"; then
+    echo "[gigos] @world 未全部成功,先用 perl-cleaner 重建 perl 模块再重试"
+    crun "command -v perl-cleaner >/dev/null 2>&1 || emerge -1q app-admin/perl-cleaner" || true
+    crun "perl-cleaner --all -- --jobs ${CORES} -q" || true
+    retry crun "${WORLD_EMERGE}" || exit 1
+fi
 
 # 显式补装 EXTRA_PKGS:@world 回溯可能把它们丢掉(如 calamares 撞 docutils 版本冲突被丢弃),
 # 显式 emerge 作参数不会被丢。逐个装 + || true,一个失败不连累其他与整锅。
