@@ -1,0 +1,23 @@
+ZFS 原生加密要求口令不少于 8 位,少于 8 位时 zpool create 会以
+"Passphrase too short (min 8)" 拒绝,安装在建池阶段中止。
+
+EncryptWidget 里已有 ZFS_MIN_LENGTH 常量,但只用于 updateState() 换图标和提示,
+state() 判定仍只看口令非空且两次一致,长度不参与,所以用户看到红色图标却仍能继续,
+直到装到建池才失败。把长度条件加进 state(),口令不足 8 位时保持 Unconfirmed,
+下一步按钮不放行。
+
+上游同一问题待报。
+
+--- a/src/modules/partition/gui/EncryptWidget.cpp
++++ b/src/modules/partition/gui/EncryptWidget.cpp
+@@ -104,7 +104,9 @@
+     if ( m_ui->m_encryptCheckBox->isChecked() || !m_ui->m_encryptCheckBox->isVisible() )
+     {
+         if ( !m_ui->m_passphraseLineEdit->text().isEmpty()
+-             && m_ui->m_passphraseLineEdit->text() == m_ui->m_confirmLineEdit->text() )
++             && m_ui->m_passphraseLineEdit->text() == m_ui->m_confirmLineEdit->text()
++             && !( m_filesystem == FileSystem::Zfs
++                   && m_ui->m_passphraseLineEdit->text().length() < ZFS_MIN_LENGTH ) )
+         {
+             newState = Encryption::Confirmed;
+         }
