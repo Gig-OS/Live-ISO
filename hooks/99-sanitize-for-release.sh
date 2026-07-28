@@ -83,8 +83,17 @@ fi
 # 6. 兜底清空二进制包 / 源码缓存（exclude.txt 也会排除，这里双保险；
 #    用 find -delete 而非 glob，空目录/不同 shell 下都可靠）。
 for d in binpkgs distfiles; do
-    find "${WORKDIR}/squashfs/var/cache/${d}" -mindepth 1 -delete 2>/dev/null || true
+    _cachedir="${WORKDIR}/squashfs/var/cache/${d}"
+    # 因为构建机把宿主的持久缓存 bind 挂载到了这两个目录,此时直接删会穿过 bind 把宿主缓存一起删掉,
+    # 下一锅只能从零编译(实测宿主 binpkg 缓存每锅后都被清空,冷构建要七个多小时)。
+    # squashfs 已由 exclude.txt 排除这两个目录,挂载状态下跳过不影响出厂结果。
+    if mountpoint -q "${_cachedir}" 2>/dev/null; then
+        echo "[99-sanitize] ${d} 是 bind 挂载的宿主缓存,跳过清理(exclude.txt 已排除,不会进 ISO)"
+        continue
+    fi
+    find "${_cachedir}" -mindepth 1 -delete 2>/dev/null || true
 done
+unset _cachedir
 
 # 7. 安全断言:装机后清理 live 残留(autologin / SSH 密码登录 / 桌面调试按钮 / polkit 免密)全靠
 #    calamares-settings-gig 的 shellprocess。打包前在此强校验契约确已接通,否则一旦指向 fork 失败
