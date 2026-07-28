@@ -120,6 +120,13 @@ command -v dracut >/dev/null 2>&1 && dracut --force --regenerate-all || \
 # 包自带的 /etc/zfsbootmenu/config.yaml(EFI.Enabled:false 默认)冲突、被包覆盖 → 只出 Components 散件、
 # 无单文件 EFI → ZFS 根开不了机(实测冲突包默认版会赢)。在此(generate-zbm 之前)落地为准,杜绝冲突。
 mkdir -p /etc/zfsbootmenu/dracut.conf.d /etc/zfsbootmenu/generate-zbm.pre.d /etc/zfsbootmenu/generate-zbm.post.d
+# 因为 ZFSBootMenu 的镜像用的是它自己的 dracut 配置目录,上面写给目标系统的 /etc/dracut.conf.d 对它无效,
+# 若不在这里也装一份 /etc/hostid,ZBM 镜像里的 SPL hostid 与建池时的不一致,zpool import 会被拒绝、
+# 直接进紧急 shell(实测:手动 zpool import -f 可以导入,正是因为 -f 绕过了 hostid 校验)。
+cat > /etc/zfsbootmenu/dracut.conf.d/10-hostid.conf <<'ZBMHOSTID'
+# 由 gig-os 安装器写入:把建池时的 hostid 一并嵌入 ZFSBootMenu 镜像,使其能导入本机的池。
+install_items+=" /etc/hostid "
+ZBMHOSTID
 cat > /etc/zfsbootmenu/config.yaml <<'ZBMCFG'
 Global:
   ManageImages: true
@@ -137,8 +144,12 @@ EFI:
   Versions: false
   Enabled: true
 Kernel:
-  CommandLine: ro quiet loglevel=0
+  CommandLine: ro quiet loglevel=0 zbm.import_policy=hostid zbm.prefer=@@POOL@@
 ZBMCFG
+# config.yaml 用的是不展开变量的 heredoc,所以池名在这里替换进去。
+# zbm.prefer 让 ZBM 优先导入本机的池;zbm.import_policy=hostid 允许它在 hostid 不匹配时
+# 采用池记录的 hostid 再导入,避免直接落进紧急 shell。
+sed -i "s|@@POOL@@|${POOL}|" /etc/zfsbootmenu/config.yaml
 ZBM_EFI=""
 if command -v generate-zbm >/dev/null 2>&1; then
     mkdir -p "${ESP_DIR}/EFI/zbm"
