@@ -39,6 +39,6 @@ esac
 {
     echo "$MARK"
     echo "# 由 gigos-mirror 按系统语言(${LANG_VAL:-未设} → ${REGION})自动选就近镜像。"
-    echo "# 删除上面这行标记即停止自动覆盖，可改成自己的值(或跑 \`mirrorselect -s4 -b10 -o >> 本文件\`)。"
+    echo "# 删除上面这行标记即停止自动覆盖，可改成自己的值(或执行 \`mirrorselect -s4 -b10 -o >> 本文件\`)。"
     printf 'GENTOO_MIRRORS="%s"\n' "$MIRRORS"
 } > "$F"

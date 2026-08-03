@@ -1,42 +1,29 @@
 #!/bin/bash
-# gigos-zfs-bootmenu.sh — 装机后(Calamares shellprocess@zfs,目标 chroot 内,dontChroot:false → ROOT=/)
-# 给 ZFS-root 安装安装 ZFSBootMenu(UEFI)并修开机三大坑。仅 ZFS 根触发，其余文件系统 no-op。
+# 由 Calamares shellprocess@zfs 在目标 chroot 内调用，为 ZFS 根安装 ZFSBootMenu(UEFI)。
+# 其余文件系统 no-op。序列位置与前置模块见 calamares-settings-gig 的 settings.conf。
 #
-# 为什么不用 GRUB:GRUB 的 ZFS 读取依赖 feature-flag 白名单，新池特性(尤其原生加密)会让
-#   GRUB 拒读 → 装好的系统开不了机。决策(多发行版调研后已定):ZFS 根一律走 ZFSBootMenu,
-#   ext4/xfs/btrfs/LUKS 仍走 GRUB。settings.conf 里 grubcfg/bootloader 仍在序列(为非 ZFS 安装),
-#   但本步接在 bootloader 之后:ZFS 根时主动拆掉 GRUB 在 ESP/NVRAM 留下的引导物、再装 ZBM,
-#   保证最终固件跑的是 ZBM 而非读不了池的 GRUB(见下面拆除 GRUB 的段落，修复 fallback 互踩)。
+# ZFS 根不用 GRUB：GRUB 按 feature-flag 白名单读池，新池特性尤其原生加密会被它拒读，
+# 装好的系统开不了机。本步接在 bootloader 之后，拆掉 GRUB 在 ESP/NVRAM 的引导物再装 ZBM，
+# 使最终生效的是 ZBM。非 ZFS 安装仍走 GRUB，不受影响。
 #
-# 整体顺序(被 Calamares 调用时，前置模块已完成):partition 写 zfsInfo → zfs(ZfsJob)建池/数据集
-#   并在 live 执行 zgenhostid → unpackfs 解包 → mount 以 -R 重导入池(+加密时 load-key)→ fstab(跳过 zfs)→
-#   zfshostid 把 live 的 /etc/hostid 拷进目标 → grubcfg/bootloader(给非 ZFS;ZFS 根产物在此被本步清除)
-#   → 本脚本(shellprocess@zfs)。
-#
-# 本脚本干官方 Calamares 模块做不了的事，每件都对应一个 ZFS 开机失败坑：
-#   1. hostid:zpool 记住建池时的 hostid;目标必须用同一 hostid 才能 import。zfshostid 已拷 hostid,
-#      仍显式校验/补建，并把 /etc/hostid 注入目标 initramfs(dracut install_items),否则首启 import 失败。
-#   2. 首启导入靠 hostid + import-scan(不烘焙可能受 altroot 污染的 zpool.cache;见下面关于 cache 的段落)。
-#   3. 原生加密：把根改成 keyfile 解锁(keyfile 只进目标 initramfs,不进 ZBM),并让 ZBM 仍在菜单
-#      处提示一次口令(keysource),避免 ZBM 解锁后目标 initramfs 再问一次的双重提示。
-#   4. ZFSBootMenu EFI:用 generate-zbm 生成单文件 UEFI 可执行、装进 ESP、efibootmgr 建项、置 bootfs。
-# 一次性安装器助手，执行后自删，不进装好的系统。
+# 四件官方模块做不到、且各自对应一个首启失败的事：
+#   1. hostid 必须与建池时一致，并注入目标 initramfs，否则 import 失败。
+#   2. 首启靠 hostid 加 import-scan，不烘焙 zpool.cache，避免 altroot 污染。
+#   3. 原生加密保留 keyformat=passphrase 与 keylocation=prompt，由 ZBM 在菜单处提示口令。
+#   4. generate-zbm 生成单文件 EFI 装进 ESP，efibootmgr 建项并置 bootfs。
 
 set -u
 
-# 一次性安装器助手：任何退出路径(含非 ZFS 安装的提前 exit、出错 exit)都自删，绝不残留进装好系统。
-# (旧版 rm 只在 ZFS 成功路径末尾；非 ZFS 提前 exit 会泄漏脚本 → verify-iso 0c 拦截。trap 根治。)
+# 任何退出路径都自删，包括非 ZFS 安装的提前 exit，否则脚本会残留进装好的系统。
 trap 'rm -f "$0" 2>/dev/null || true' EXIT
 
-# ── 探针(gating,镜像 shellprocess@nvidia / gigos-fix-crypttab 风格)──
-# 非 ZFS 根直接退出 0,本步对 ext4/xfs/btrfs/LUKS 安装彻底 no-op。
-# findmnt 看目标根(本脚本在目标 chroot 内 → / 即装好系统的根)。
+# 探针：非 ZFS 根直接退出 0。脚本在目标 chroot 内，findmnt 看到的 / 就是装好系统的根。
 if ! findmnt -no FSTYPE / 2>/dev/null | grep -qx zfs; then
     echo "[gigos-zbm] 根文件系统非 ZFS,跳过 ZFSBootMenu 配置"
     exit 0
 fi
 
-# 取根数据集与池名(根挂载源形如 zpcala/ROOT/distro/root)
+# 根挂载源形如 zpcala/ROOT/distro/root。
 ROOTDS=$(findmnt -no SOURCE / 2>/dev/null)
 POOL=${ROOTDS%%/*}
 if [ -z "${POOL}" ] || [ "${POOL}" = "${ROOTDS}" ]; then
@@ -45,10 +32,9 @@ if [ -z "${POOL}" ] || [ "${POOL}" = "${ROOTDS}" ]; then
 fi
 echo "[gigos-zbm] ZFS 根:pool=${POOL} rootds=${ROOTDS}"
 
-# ── 恢复被 gigos-zfs-prebootloader.sh 中和的 grub 工具 ──
-# 前置步骤(shellprocess@zfspre)为让 Calamares 的 grubcfg/bootloader 模块不在 ZFS 上致命失败，
-# 把 grub-install/grub-mkconfig 临时换成 no-op(挪到 .gigos-real)。本步在 bootloader 之后执行，
-# 把它们还原，使装好的系统保留正常的 grub 工具(ZFS 系统虽走 ZBM,但不留改过的系统二进制更干净)。
+# 还原 shellprocess@zfspre 中和掉的 grub 工具。它把 grub-install/grub-mkconfig 挪到
+# .gigos-real 换成 no-op，好让 grubcfg/bootloader 不在 ZFS 上致命失败；bootloader 已过，
+# 此处还原，装好的系统不留被改过的系统二进制。
 for r in /usr/sbin/grub-install.gigos-real /usr/bin/grub-install.gigos-real \
          /usr/sbin/grub-mkconfig.gigos-real /usr/bin/grub-mkconfig.gigos-real; do
     [ -e "$r" ] && mv -f "$r" "${r%.gigos-real}" && echo "[gigos-zbm] 已还原 ${r%.gigos-real}"
@@ -64,65 +50,48 @@ if [ ! -d /sys/firmware/efi/efivars ]; then
     exit 1
 fi
 
-# ── 1 hostid:确保目标 /etc/hostid 存在(zfshostid 模块通常已拷),并与池匹配 ──
-# 池在 live 由 ZfsJob 的 zgenhostid 建池;zfshostid 已把 live /etc/hostid 拷进目标。
-# 若缺失，用 zgenhostid 补建(plain zgenhostid 不覆盖已存在文件 → 幂等安全)。
+# hostid 必须与建池时一致。zfshostid 模块通常已拷好，缺失时用 zgenhostid 补建；
+# 它不覆盖已存在的文件，重复执行安全。
 command -v zgenhostid >/dev/null 2>&1 && zgenhostid 2>/dev/null || true
 [ -s /etc/hostid ] || { echo "[gigos-zbm] 致命：目标缺 /etc/hostid,首启将无法 import 池，中止"; exit 1; }
 
-# ── 3 原生加密：保留 keyformat=passphrase + keylocation=prompt(ZfsJob 勾选加密时所设)──
-# 由 ZFSBootMenu 在菜单处提示口令解锁。QEMU 实测:ZBM 能导入加密池、解锁、kexec 一路进 KDE 桌面。
-# 不要像旧版那样 change-key 成 raw keyfile:那样 keyfile 落在加密根内、ZBM 解锁前无法读取,raw 又无法
-# 在 ZBM 处提示输入 → ZBM 根本解不开加密根、开不了机(已实测会炸)。保留 passphrase 让 ZBM 直接 prompt
-# 才是可行解。(若目标 initramfs 出现第二次口令提示，属可接受的小瑕疵；实测本路径未阻塞引导。)
-ZFS_KEYFILE=""
+# 原生加密保留 ZfsJob 设的 keyformat=passphrase 与 keylocation=prompt，由 ZBM 提示口令。
+# 不要改成 raw keyfile：keyfile 会落在加密根内，ZBM 解锁前无法读取，raw 又无法在 ZBM 处提示输入，
+# 结果是解不开加密根、开不了机。代价是目标 initramfs 可能再提示一次口令，不阻塞引导。
 
-# ── 2 zpool.cache:不烘焙(避免 altroot 污染),改用 hostid + import-scan ──
-# Calamares mount 模块以 `zpool import -N -R /`(altroot)导入池；此时 `zpool set cachefile` 写出的
-# cache 记录的是 altroot 导入上下文，烘进目标 initramfs 后首启 zfs-import-cache 可能卡/失配。
-# 决策：目标 initramfs 只烘 hostid,不烘 cache;首启用 hostid 匹配 + import-by-scan(单盘目标稳妥)。
-# 目标系统侧同时启用 zfs-import-scan.service 作兜底，使缺/旧 cache 不致让 zfs-import.target 卡住。
+# 不烘 zpool.cache：Calamares 的 mount 模块以 altroot(-R /)导入，写出的 cache 记的是 altroot
+# 上下文，烘进目标 initramfs 后首启可能卡住或失配。只烘 hostid，首启靠 hostid 加 import-scan，
+# 并启用 zfs-import-scan.service 兜底。
 mkdir -p /etc/dracut.conf.d
 {
     echo "# 由 gig-os 安装器(gigos-zfs-bootmenu.sh)写入：把 hostid 嵌入目标 initramfs。"
     echo "# hostid 必须与建池 hostid 一致，否则首启 zpool import 因 hostid 不符而失败。"
     echo "# 不烘 zpool.cache:它在 Calamares 的 altroot(-R /)导入下生成，可能污染；改用 import-scan。"
     echo 'add_dracutmodules+=" zfs "'
-    if [ -n "${ZFS_KEYFILE}" ]; then
-        echo "# 原生加密 keyfile:仅嵌入目标 initramfs,使首启静默解锁、不二次提示口令(口令在 ZBM 输一次)。"
-        echo "install_items+=\" /etc/hostid ${ZFS_KEYFILE} \""
-    else
-        echo 'install_items+=" /etc/hostid "'
-    fi
+    echo 'install_items+=" /etc/hostid "'
 } > /etc/dracut.conf.d/10-zfs-hostid.conf
 
-# ── ZFS systemd 服务：目标系统开机自动导入(cache + scan 双保险)/挂载/ZED ──
+# 目标系统的开机导入、挂载与 ZED。
 systemctl enable zfs-import-scan.service zfs-mount.service zfs-zed.service zfs.target zfs-import.target 2>/dev/null || \
     echo "[gigos-zbm] 警告：部分 zfs systemd 单元 enable 失败(将依赖 preset),继续"
 
-# ── 池属性：供 ZFSBootMenu 读取(bootfs 指向引导环境,commandline 传内核 cmdline)──
+# 池属性供 ZBM 读取：bootfs 指向引导环境，commandline 是 ZBM kexec 时附加的内核 cmdline。
 zpool set bootfs="${ROOTDS}" "${POOL}" 2>/dev/null || echo "[gigos-zbm] 警告：设 bootfs 失败，继续"
-# commandline 是 ZBM kexec 进内核时附加的 cmdline。dist-kernel + dracut 不需要显式 root=(ZBM 注入);
-# 加密由 keyfile 在目标 initramfs 静默处理，不在此放任何密钥。
+# dist-kernel 加 dracut 不需要显式 root=，由 ZBM 注入。此处不放任何密钥。
 zfs set org.zfsbootmenu:commandline="rw quiet" "${ROOTDS}" 2>/dev/null || true
 
-# ── 重建目标 initramfs,纳入上面的 hostid/keyfile 配置 ──
-# dist-kernel:dracut --regenerate-all 覆盖所有已装内核；含可能的 keyfile 故给足超时(见 .conf timeout)。
-# 必须在 generate-zbm 之前:ZBM 也用 dracut 生成自己的镜像，但 ZBM 镜像不含目标 keyfile(keyfile
-# 只在目标 /etc/dracut.conf.d,ZBM 用自己的 /etc/zfsbootmenu/dracut.conf.d),互不污染。
+# 重建目标 initramfs 纳入上面的 hostid。必须在 generate-zbm 之前：两者都用 dracut，
+# 但读的是不同的配置目录，目标读 /etc/dracut.conf.d，ZBM 读 /etc/zfsbootmenu/dracut.conf.d。
 command -v dracut >/dev/null 2>&1 && dracut --force --regenerate-all || \
     echo "[gigos-zbm] 警告:dracut 重建失败，首启可能需在 ZBM 手动 import"
 
-# ── 4 ZFSBootMenu EFI:generate-zbm 生成单文件 UEFI 可执行，装进 ESP ──
-# guru 的 sys-boot/zfsbootmenu 不预装 *.EFI(只装 perl 脚本 + generate-zbm),故必须现场生成。
-# 单文件 EFI 需 EFI stub(linuxx64.efi.stub,来自 sys-apps/systemd[boot])与 EFI.Enabled:true 的 config。
-# 关键：这里在目标内就地写 config.yaml:不靠 include-squashfs 投放，那个会和 sys-boot/zfsbootmenu
-# 包自带的 /etc/zfsbootmenu/config.yaml(EFI.Enabled:false 默认)冲突、被包覆盖 → 只出 Components 散件、
-# 无单文件 EFI → ZFS 根开不了机(实测冲突包默认版会赢)。在此(generate-zbm 之前)落地为准，杜绝冲突。
+# sys-boot/zfsbootmenu 只装 perl 脚本与 generate-zbm，不预装 *.EFI，必须现场生成。
+# 单文件 EFI 需要 sys-apps/systemd[boot] 的 linuxx64.efi.stub 与 EFI.Enabled: true。
+# config.yaml 在此就地写，不经 include-squashfs 投放：包自带的那份默认 EFI.Enabled: false，
+# 投放的会被它覆盖，结果只出 Components 散件、没有单文件 EFI，ZFS 根开不了机。
 mkdir -p /etc/zfsbootmenu/dracut.conf.d /etc/zfsbootmenu/generate-zbm.pre.d /etc/zfsbootmenu/generate-zbm.post.d
-# 因为 ZFSBootMenu 的镜像用的是它自己的 dracut 配置目录，上面写给目标系统的 /etc/dracut.conf.d 对它无效，
-# 若不在这里也装一份 /etc/hostid,ZBM 镜像里的 SPL hostid 与建池时的不一致,zpool import 会被拒绝、
-# 直接进紧急 shell(实测：手动 zpool import -f 可以导入，正是因为 -f 绕过了 hostid 校验)。
+# ZBM 镜像用自己的 dracut 配置目录，上面写给目标系统的那份对它无效。这里不装一份 /etc/hostid，
+# ZBM 镜像内的 SPL hostid 就与建池时不一致，zpool import 被拒绝，开机直接落进紧急 shell。
 cat > /etc/zfsbootmenu/dracut.conf.d/10-hostid.conf <<'ZBMHOSTID'
 # 由 gig-os 安装器写入：把建池时的 hostid 一并嵌入 ZFSBootMenu 镜像，使其能导入本机的池。
 install_items+=" /etc/hostid "
@@ -146,9 +115,8 @@ EFI:
 Kernel:
   CommandLine: ro quiet loglevel=0 zbm.import_policy=hostid zbm.prefer=@@POOL@@
 ZBMCFG
-# config.yaml 用的是不展开变量的 heredoc,所以池名在这里替换进去。
-# zbm.prefer 让 ZBM 优先导入本机的池;zbm.import_policy=hostid 允许它在 hostid 不匹配时
-# 采用池记录的 hostid 再导入，避免直接落进紧急 shell。
+# heredoc 不展开变量，池名在这里替换。zbm.prefer 让 ZBM 优先导入本机的池；
+# zbm.import_policy=hostid 允许 hostid 不匹配时改用池记录的 hostid 再导入。
 sed -i "s|@@POOL@@|${POOL}|" /etc/zfsbootmenu/config.yaml
 ZBM_EFI=""
 if command -v generate-zbm >/dev/null 2>&1; then
@@ -165,37 +133,33 @@ fi
 [ -n "${ZBM_EFI}" ] || { echo "[gigos-zbm] 致命:generate-zbm 未产出 *.EFI(缺 EFI stub?config EFI.Enabled?),中止"; exit 1; }
 echo "[gigos-zbm] ZBM EFI 已生成：${ZBM_EFI}"
 
-# ── 拆 GRUB:修复 fallback 互踩 + 不留读不了池的 GRUB 引导项 ──
-# bootloader.conf installEFIFallback:true → 前面的 GRUB bootloader 模块已把 GRUB 写进
-# ESP 的 EFI/BOOT/BOOTX64.EFI 和 EFI/<entry>/grubx64.efi,并建了 GRUB NVRAM 项。GRUB 读不了
-# 本 ZFS 池(正是改用 ZBM 的原因),若固件走 fallback 或选到 GRUB 项 → grub rescue。本步在
-# bootloader 之后执行，主动：1 删 ESP 里含 grubx64.efi 的 GRUB 目录；2 删 GRUB NVRAM 项
-# (按 loader 路径 \EFI\*\grubx64.efi 反查，不依赖人类可读名 ${NAME});3 最后把 ZBM 写成
-# fallback BOOTX64.EFI(最后写者胜)。
-# 1. 删 ESP 里的 GRUB 目录(任何含 grubx64.efi 的 EFI 子目录)
+# 拆 GRUB。bootloader.conf 的 installEFIFallback: true 已让 GRUB 写进 ESP 的
+# EFI/BOOT/BOOTX64.EFI 与 EFI/<entry>/grubx64.efi 并建了 NVRAM 项，而 GRUB 读不了本池，
+# 固件走 fallback 或选到 GRUB 项就掉进 grub rescue。三步按序执行，最后写者胜。
+# 1. 删 ESP 上含 grubx64.efi 的 EFI 子目录
 for grubdir in "${ESP_DIR}"/EFI/*/; do
     if [ -f "${grubdir}grubx64.efi" ] || [ -f "${grubdir}grubx64.EFI" ]; then
         echo "[gigos-zbm] 删除 ESP 上的 GRUB 目录：${grubdir}"
         rm -rf "${grubdir}"
     fi
 done
-# 2. 删指向 grubx64.efi 的 GRUB NVRAM 引导项(用 -v 输出里的 File 路径匹配，大小写无关)
+# 2. 删指向 grubx64.efi 的 NVRAM 项。按 loader 路径反查，不依赖人类可读名。
 if command -v efibootmgr >/dev/null 2>&1; then
     for n in $(efibootmgr -v 2>/dev/null | grep -iE 'File\(.*grubx64\.efi' | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\).*/\1/p'); do
         echo "[gigos-zbm] 删除 GRUB NVRAM 引导项 Boot${n}"
         efibootmgr -B -b "${n}" >/dev/null 2>&1 || true
     done
-    # 删旧的同名 ZFSBootMenu 项(幂等重装)
+    # 删旧的同名 ZBM 项，使重装幂等
     for n in $(efibootmgr 2>/dev/null | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\)\*\?[[:space:]]*ZFSBootMenu$/\1/p'); do
         efibootmgr -B -b "${n}" >/dev/null 2>&1 || true
     done
 fi
 
-# 3. 安装 ZBM 到固定路径 + fallback(最后写，盖过 GRUB 的 BOOTX64.EFI)
+# 3. 装 ZBM 到固定路径与 fallback，盖过 GRUB 的 BOOTX64.EFI
 install -D -m0644 "${ZBM_EFI}" "${ESP_DIR}/EFI/zbm/vmlinuz.EFI"
 install -D -m0644 "${ZBM_EFI}" "${ESP_DIR}/EFI/BOOT/BOOTX64.EFI"
 
-# 建 ZBM 的 UEFI 引导项并置于 BootOrder 之首(-c 默认即前插)。ESP 磁盘/分区号由挂载源反推。
+# 建 ZBM 的 UEFI 引导项并置于 BootOrder 之首。ESP 磁盘与分区号由挂载源反推。
 ESP_DEV=$(findmnt -no SOURCE "${ESP_DIR}")
 ESP_DISK=$(lsblk -no PKNAME "${ESP_DEV}" 2>/dev/null | head -1)
 ESP_PART=$(lsblk -no PARTN "${ESP_DEV}" 2>/dev/null | head -1)

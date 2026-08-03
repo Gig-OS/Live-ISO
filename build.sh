@@ -170,14 +170,11 @@ function buildbootfiles () {
     KVER="$(ls "${WORKDIR}/squashfs/lib/modules" | sort -Vr | head -n1)"
     # --xz:与官方 livegui 一致的 initramfs 压缩，体积更小
     #
-    # nvidia 闭源驱动不进 initramfs(不走 early KMS):闭源 grub 项传 gigos.gpu=nvidia,
-    # 开机后由 gigos-nvidia-load.service 常规 modprobe nvidia 四件套 + 建设备节点(此时 udev 已就绪、
-    # /dev/nvidia* 正常创建)。这是 Arch/Gentoo wiki 推荐的常规做法，比 early KMS 简单可靠、
-    # 不踩 initramfs 漏建节点(nvidia-smi 连不上、KWin 退软渲)那一串坑。
-    # --omit network-manager:本地介质启动的 live 不需要 initrd 内联网络；若把 NM 模块打进
-    # initramfs,其 NetworkManager-initrd.service(BusName=org.freedesktop.NetworkManager)会在
-    # initrd 阶段被加载并随 switch-root 带进真根，与真根的 NetworkManager.service 撞同一 BusName,
-    # 导致 systemd 拒载 NM.service → 开机网络不自起。从源头不放进 initramfs 即可避免。
+    # nvidia 闭源驱动不进 initramfs：闭源 grub 项传 gigos.gpu=nvidia，开机后由
+    # gigos-nvidia-load.service 常规 modprobe 并建设备节点，此时 udev 已就绪。
+    # --omit network-manager：NM 模块进了 initramfs，其 NetworkManager-initrd.service 会随
+    # switch-root 带进真根，与真根的 NetworkManager.service 撞同一 BusName，systemd 拒载后
+    # 开机网络不自起。
     crun dracut --no-hostonly -f --kver "${KVER}" --xz --add dmsquash-live --add dmsquash-live-autooverlay --add crypt --omit network-manager || exit 1
 
     # copy the kernel to iso workdir
@@ -227,14 +224,11 @@ rsync -rl --copy-unsafe-links "${WORKDIR}"/include-squashfs/* "${WORKDIR}/squash
 refreshconfig
 mounttmpfs
 
-# [gigos] 生成 locale。fork 出的是中文 ISO(locale.conf=zh_CN.UTF-8),却一直没带 locale.gen,该 locale
-# 从没生成过。构建期 btrfs-progs 的 man 走 sphinx(python),按 LANG 调 setlocale('') 读到未生成的
-# zh_CN.UTF-8 → locale.Error、man 编译失败(实机卡在 btrfs-progs 并连累依赖它的 calamares-settings-gig)。
-# 直接用 localedef 生成需要的两个真 locale(不走 locale-gen:它会强行把内建的 C.UTF-8 也算进去，而纯
-# stage3 里 C.UTF-8 编不出 → `not all compiled`中止整锅;C.UTF-8 是内建 locale,本就无需生成)。
-# localedef 遇字符集告警也可能返回非零，故不看退出码，改断言 zh_CN 真生成出来了(它才是构建 LANG 依赖的)。
-# 三语 ISO=简/繁/英，三个都要真编进 locale-archive(verify-iso.sh 硬查 zh_CN.utf8 + zh_TW.utf8;
-# 少了中文会回退 C)。glibc 自己的 postinst locale-gen 在纯 stage3 里会 abort(见上),故这里自己 localedef。
+# 生成 locale。locale.conf 是 zh_CN.UTF-8，未生成该 locale 时 btrfs-progs 的 man 走 sphinx
+# 调 setlocale('') 会抛 locale.Error，man 编译失败并连累依赖它的包。
+# 用 localedef 而不用 locale-gen：后者会把内建的 C.UTF-8 也算进去，纯 stage3 里编不出，
+# 以 `not all compiled` 中止整锅。localedef 遇字符集告警也可能返回非零，所以不看退出码，
+# 改断言 zh_CN 确实生成。三语都要编进 locale-archive，verify-iso.sh 会硬查。
 crun localedef -i en_US -f UTF-8 en_US.UTF-8 || true
 crun localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
 crun localedef -i zh_TW -f UTF-8 zh_TW.UTF-8 || true
@@ -246,18 +240,17 @@ cp --dereference /etc/resolv.conf "${WORKDIR}/squashfs"/etc/
 
 syncrepo
 
-# [gigos] 动态钉最新 amd64-stable 工具链(gcc)+ 内核 + zfs,必须放在任何 emerge 之前：下面 portage/git
-# 升级会用 -D 拖来 gcc,晚了 gcc-16 快照就先装进来了。全局 ACCEPT_KEYWORDS="~amd64 *" 默认挑最新测试版
-# (实机踩过：内核 7.1.3 超 OpenZFS 上限、zfs-2.4.3 拖 RC 模块、gcc-16 快照把 btrfs-progs 编挂)。从刚同步好的
-# 树的 md5-cache 精确读各自最新 amd64-stable 版本(newest_stable,不靠 ACCEPT_KEYWORDS,它是增量变量、会跟
-# make.conf 的 ~amd64 * 累加压不住),再 mask 掉其上的测试版,portage 就停在 stable。两条兼容(内核 ≤ zfs-kmod
-# 上限、zfs=zfs-kmod 同版本)由 99-sanitize 出锅前硬断言兜底。改钉版策略就改这一段。
+# 动态钉最新 amd64-stable 的 gcc、内核与 zfs，必须放在任何 emerge 之前：随后的 portage/git
+# 升级会用 -D 拖来 gcc，晚了就先装进测试版。全局 ACCEPT_KEYWORDS="~amd64 *" 默认挑最新测试版，
+# 已知会拖来超 OpenZFS 上限的内核、RC 版 zfs 模块与编不过 btrfs-progs 的 gcc 快照。
+# 版本从刚同步的树的 md5-cache 读 newest_stable，不靠 ACCEPT_KEYWORDS，它是增量变量压不住。
+# 内核不超 zfs-kmod 上限、zfs 与 zfs-kmod 同版本这两条由 99-sanitize 出锅前硬断言兜底。
+# 改钉版策略就改这一段。
 GSTAB=$(newest_stable sys-devel/gcc)
 KSTAB=$(newest_stable sys-kernel/gentoo-kernel-bin)
-# ZFS 有两种形态，这里自动判别，免得上游一变就要手改：
-#   - 新(>=2.4.1):上游把 zfs-kmod 合并进 sys-fs/zfs(ebuild 里 MODULES_OPTIONAL_IUSE=+modules + linux-mod-r1),
-#     一个包出用户态和 zfs.ko;zfs-kmod 那边最新 stable 停在 2.3.6、2.4.0_rc2-r1 连 KEYWORDS 都空了。
-#   - 旧(<=2.3.8):zfs + zfs-kmod 两个包，必须同版本。
+# ZFS 有两种形态，自动判别，免得上游一变就要手改：
+#   - >=2.4.1：zfs-kmod 已合并进 sys-fs/zfs，一个包出用户态与 zfs.ko。
+#   - <=2.3.8：zfs 与 zfs-kmod 两个包，必须同版本。
 # 先取 sys-fs/zfs 的最新 stable,读它的 ebuild 判断是否已合并：合并了就只以它为准、内核上限取自该 ebuild；
 # 没合并才退回旧路(以 zfs-kmod 的最新 stable 为准)。这样 zfs-kmod 将来被移出树也不会把整锅炸掉。
 ZSTAB=$(newest_stable sys-fs/zfs)
@@ -280,10 +273,9 @@ mkdir -p "${WORKDIR}/squashfs/etc/portage/package.mask"
 cat > "${WORKDIR}/squashfs/etc/portage/package.mask/kernel-zfs" <<MASKEOF
 # 本文件由 build.sh 每锅动态生成：钉最新 amd64-stable gcc + 内核 + zfs,免手工维护(改法见 build.sh 生成它那段)。
 # 本锅算得:gcc ${GSTAB}、内核 ${KSTAB}、zfs ${ZSTAB}。mask 掉算出的 stable 版之上的测试版,portage 停在 stable。
-# vanilla-kernel 必须一起 mask:sys-fs/zfs[dist-kernel] 依赖无版本的 virtual/dist-kernel,-uD @world 会挑
-# 版本最高的 provider 来满足它。gentoo-kernel-bin 钉在 ${KSTAB} 了，但 vanilla-kernel 没钉 → 实机上被拖来
-# vanilla-kernel-7.1.3(装出第二个内核 /lib/modules/7.1.3-dist),它超 OpenZFS 上限、没 zfs.ko,被 99-sanitize
-# 逮住中止。把 vanilla-kernel 也钉到 ${KSTAB},virtual/dist-kernel 就只能落到 gentoo-kernel-bin-${KSTAB}(world 里已有)。
+# vanilla-kernel 必须一起 mask：sys-fs/zfs[dist-kernel] 依赖无版本的 virtual/dist-kernel，
+# -uD @world 会挑版本最高的 provider。只钉 gentoo-kernel-bin 时 vanilla-kernel 会被拖来，
+# 装出第二个超 OpenZFS 上限且无 zfs.ko 的内核。两个都钉到 ${KSTAB}，provider 就只剩前者。
 >sys-devel/gcc-${GSTAB}
 >sys-kernel/gentoo-kernel-bin-${KSTAB}
 >sys-kernel/gentoo-kernel-${KSTAB}
@@ -299,8 +291,7 @@ MASKEOF
 # merge-sync 只为防断电丢数据，对 tmpfs 全内存构建无意义，关掉零损失。
 retry crun FEATURES="-merge-sync" emerge -vu1q --jobs "${CORES}" portage
 # we need git to sync overlay。
-# 这步是 -uD 深度解算，会把 @system 一大串构建后端拖进来算，滚动树一漂就可能要求新的 USE
-# (2026-07-19 实机：要 gpep517/jaraco-*/platformdirs 的 python3_13,整锅一分钟就挂)。
+# 这步是 -uD 深度解算，会把 @system 一大串构建后端拖进来，滚动树一漂就可能要求新的 USE。
 # 给它和 @world 同样的自愈参数：autounmask 把 USE 写进 zz-autounmask 后继续；
 # CONFIG_PROTECT="-*" 让写入当次即生效(否则被拦成 ._cfg、续跑仍缺那条);
 # --autounmask-keep-masks=y 保证不会掀掉我们钉 stable 的 package.mask。
@@ -353,11 +344,10 @@ else
     exit 1
 fi
 
-# [gigos][zfs] zfs-kmod 从源码编需 /usr/src/linux 指向 dist-kernel 构建树(.config/Module.symvers +
-# /lib/modules/<ver>/build),这些符号链接由 gentoo-kernel-bin 的 pkg_postinst 建。在单次 @world 事务里
-# zfs 的 pkg_setup 可能早于内核 postinst 执行 →`kernel needs to be rebuilt`失败(nvidia 走 binpkg、
-# MERGE_TYPE=binary 跳过内核检查故无事)。解法：先单独 emerge gentoo-kernel-bin(postinst 立刻建好链接)、
-# eselect kernel set 锁定 /usr/src/linux,之后 @world 里的 sys-fs/zfs 方能编过。
+# zfs-kmod 从源码编需要 /usr/src/linux 指向 dist-kernel 构建树，这些链接由 gentoo-kernel-bin
+# 的 pkg_postinst 建立。单次 @world 事务里 zfs 的 pkg_setup 可能早于内核 postinst 执行，
+# 报 `kernel needs to be rebuilt`。所以先单独 emerge gentoo-kernel-bin 再 eselect kernel set
+# 锁定 /usr/src/linux。nvidia 走 binpkg，MERGE_TYPE=binary 跳过内核检查，不受影响。
 retry crun emerge -vu1q --jobs "${CORES}" sys-kernel/gentoo-kernel-bin || exit 1
 crun eselect kernel set 1 || true
 # objtool 可用性:gentoo-kernel-bin 自带的 objtool 动态链接 libelf + binutils-libs(libbfd,内核 ≥6.19);
@@ -369,10 +359,9 @@ crun sh -c 'O=/usr/src/linux/tools/objtool/objtool; if [ -e "$O" ]; then "$O" >/
 
 # 升级整个系统。CONFIG_PROTECT="-*" 让 --autounmask-continue 写的 package.use 当次即生效
 # (否则被 CONFIG_PROTECT 拦成 ._cfg 待处理、当次不读 → autounmask 续跑仍缺那条 → 失败)。
-# FEATURES="-merge-sync" 理由同 portage 升级处。autounmask 自愈滚动树的 USE / 关键字漂移；
-# FEATURES="-merge-sync" 理由同 portage 升级处。autounmask 自愈滚动树的 USE / 关键字漂移；但 python
-# 目标迁移期(官方 stage3 种子仍带 3.13)那串 @system 构建后端的 3_13 桥接,portage 回溯收敛不了
-# (试过 --autounmask-backtrack=y + --backtrack=300 仍早退),改由 package.use/python-transition 显式给足 USE。
+# FEATURES="-merge-sync" 理由同 portage 升级处。autounmask 自愈滚动树的 USE 与关键字漂移；
+# 但 python 目标迁移期那串 @system 构建后端的 3_13 桥接，portage 回溯收敛不了，
+# --autounmask-backtrack=y 加 --backtrack=300 仍会早退，改由 package.use/python-transition 显式给足 USE。
 WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"${CORES}"' --keep-going --autounmask-continue --autounmask-keep-masks=y @world'
 # 因为 dev-lang/perl 是在本次 @world 中途升级的，升级后旧 perl 版本目录下的模块对新 perl 不可见，
 # 依赖它们的构建工具会失败：help2man 需要 Locale::gettext，无法取得就让 app-crypt/sbsigntools 这类
