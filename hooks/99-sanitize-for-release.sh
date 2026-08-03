@@ -47,14 +47,18 @@ cat > "${MC}/cpuflags" <<'CPUF'
 CPU_FLAGS_X86="aes avx avx2 f16c fma3 mmx mmxext pclmul popcnt rdrand sse sse2 sse3 sse4_1 sse4_2 ssse3"
 CPUF
 
-# 4. GENTOO_MIRRORS 写带标记的中国大陆基线，开机后由 gigos-mirror.service 按系统语言
-#    改成就近镜像，机制与 gigos-cpuflags 相同。标记表示这是自动值，用户删掉即固定。
-#    与构建时用的源无关。
+# 4. GENTOO_MIRRORS 写带标记的海外基线，开机后由 gigos-mirror.service 按出口 IP 国家码
+#    改成就近镜像，取不到国家码再按系统语言，机制与 gigos-cpuflags 相同。
+#    标记表示这是自动值，用户删掉即固定。与构建时用的源无关。
 {
     echo '# gigos-auto-mirror'
-    echo '# 出厂基线(中国大陆);开机后 gigos-mirror.service 按系统语言覆盖。删除本行标记即停止自动覆盖。'
-    echo 'GENTOO_MIRRORS="https://mirrors.aliyun.com/gentoo/ https://mirrors.tuna.tsinghua.edu.cn/gentoo/ https://mirrors.ustc.edu.cn/gentoo/ https://mirrors.bfsu.edu.cn/gentoo/"'
+    echo '# 出厂基线是海外源;开机后 gigos-mirror.service 按出口 IP 或系统语言覆盖。删除本行标记即停止自动覆盖。'
+    echo 'GENTOO_MIRRORS="https://distfiles.gentoo.org/ https://gentoo.osuosl.org/ https://ftp.fau.de/gentoo/"'
 } > "${MC}/mirror"
+
+# 出厂不带 gigos-mirror 运行期生成的 repos.conf 覆盖文件。它按开机时判定的地区写，
+# 烘进 ISO 会让所有人拿到构建机所在地区的源，且首启前就带上无从核对的地址。
+rm -f "${WORKDIR}/squashfs/etc/portage/repos.conf/zz-gigos-mirror.conf"
 
 # 5. 解除 nvidia.conf 对 nouveau 的静态黑名单。
 #    nvidia-drivers 自带的 /etc/modprobe.d/nvidia.conf 首行 `blacklist nouveau` 会让整个

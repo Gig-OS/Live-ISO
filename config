@@ -23,7 +23,7 @@
 # 社区 overlay（name|git-url）。@world 前显式 clone（emerge --sync 不建不存在的 location）。
 OVERLAYS=(
     "gig|https://github.com/Gig-OS/gig.git"
-    "gentoo-zh|https://mirrors.cernet.edu.cn/gentoo-zh.git"
+    "gentoo-zh|https://github.com/gentoo-zh/overlay.git"
     "guru|https://github.com/gentoo-mirror/guru.git"
 )
 # calamares-settings-gig 的 9999 ebuild 指向这个仓库，它带装机清理与 nvidia 自动配置。
