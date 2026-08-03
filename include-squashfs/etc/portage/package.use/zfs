@@ -1,4 +1,4 @@
-# zfs-kmod 随发行版二进制内核(gentoo-kernel-bin)自动重建,避免内核更新后模块失配
+# zfs-kmod 随发行版二进制内核(gentoo-kernel-bin)自动重建，避免内核更新后模块失配
 sys-fs/zfs dist-kernel
 
 # ZFSBootMenu 单文件 UEFI EFI 的生成依赖:generate-zbm 用 systemd 的 EFI stub

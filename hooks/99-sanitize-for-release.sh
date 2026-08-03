@@ -12,7 +12,7 @@
 MC="${WORKDIR}/squashfs/etc/portage/make.conf"
 
 # 1. MAKEOPTS 还原为安全兜底字面量 -j4。
-#    切勿写 $(nproc):portage 的 make.conf 解析器不支持命令替换,会每次 emerge
+#    切勿写 $(nproc):portage 的 make.conf 解析器不支持命令替换，会每次 emerge
 #    报 "line N: $: bad substitution" 且 MAKEOPTS 失效。真正的按 CPU 自适应由开机的
 #    gigos-cpuflags.service 写进 make.conf.d/cpuflags(字母序在 common 之后覆盖此值);
 #    -j4 仅是首启动前/服务未跑时的安全兜底(小内存机也不致 OOM)。
@@ -31,7 +31,7 @@ if [ -d "${MC}" ]; then
 fi
 
 # 2.5 清掉 @world 的 --autounmask-continue 在构建期写的 zz-autounmask(USE / keyword / mask pin)。
-#     CONFIG_PROTECT="-*" 下这些直接落进系统树,是构建期滚动树漂移的产物,不应随 ISO 发给用户。
+#     CONFIG_PROTECT="-*" 下这些直接落进系统树，是构建期滚动树漂移的产物，不应随 ISO 发给用户。
 PRT="${WORKDIR}/squashfs/etc/portage"
 rm -f "${PRT}/package.use/zz-autounmask" "${PRT}/package.accept_keywords/zz-autounmask" \
       "${PRT}/package.mask/zz-autounmask" "${PRT}/package.license/zz-autounmask" 2>/dev/null || true
@@ -40,41 +40,41 @@ rm -f "${PRT}/package.use/zz-autounmask" "${PRT}/package.accept_keywords/zz-auto
 #    Calamares 装机是把本 live squashfs 整盘复制到用户硬盘，所以这里的
 #    make.conf 会原样成为用户系统的配置。若保留构建机的 CPU_FLAGS_X86
 #    （如含 avx2），用户 CPU 若不支持，后续 emerge 编译出的包会在运行时
-#    SIGILL 崩溃,这正是"第三方 live 装完不兼容/损坏系统"的典型成因。
+#    SIGILL 崩溃，这正是"第三方 live 装完不兼容/损坏系统"的典型成因。
 #    出厂策略改为带标记的安全基线加开机自适应服务:cpuflags 写 x86-64-v3 基线并加
 #    gigos-auto-cpuflags 标记,gigos-cpuflags.service 在 live 与装好的系统每次启动按
 #    真机 CPU(cpuid2cpuflags,见 world)覆盖之(用户删标记即停)。比旧的"手动占位"开箱即用。
 #    这里先清掉其它文件里可能残留的 CPU_FLAGS_X86,再把 cpuflags 归一成标记加基线
-#    (与 include-squashfs 的同名文件一致,幂等)。
+#    (与 include-squashfs 的同名文件一致，幂等)。
 for f in "${MC}"/common "${MC}"/cpuflags.conf; do
     [ -f "$f" ] && sed -i '/^CPU_FLAGS_X86=/d' "$f"
 done
 cat > "${MC}/cpuflags" <<'CPUF'
 # gigos-auto-cpuflags
-# 由 gigos-cpuflags 按本机 CPU 自动生成;删除上面这行标记即停止自动覆盖,可改成自己的值。
+# 由 gigos-cpuflags 按本机 CPU 自动生成；删除上面这行标记即停止自动覆盖，可改成自己的值。
 # 下面是出厂安全基线(x86-64-v3,2013+/AVX2);开机后 gigos-cpuflags.service 按真机 CPU 覆盖。
 CPU_FLAGS_X86="aes avx avx2 f16c fma3 mmx mmxext pclmul popcnt rdrand sse sse2 sse3 sse4_1 sse4_2 ssse3"
 CPUF
 
 # 4. 出厂 GENTOO_MIRRORS：写带标记的基线(中国大陆)。开机后 gigos-mirror.service 按系统语言
-#    自动选就近镜像(简→大陆 / 繁→台港 / 英→全球),我们支持简/繁/英三语,写死单一中国镜像对
-#    繁体、海外用户不友好,故改成基线加按语言自适应,与 gigos-cpuflags 同套机制。
-#    第一行的标记让 gigos-mirror 知道这是自动值、可覆盖;用户删掉标记即固定为自己的值。
-#    注意：这与构建时用的源无关,构建机在香港直连官方源(见 build-and-deploy.sh / config)。
+#    自动选就近镜像(简→大陆 / 繁→台港 / 英→全球),我们支持简/繁/英三语，写死单一中国镜像对
+#    繁体、海外用户不友好，故改成基线加按语言自适应，与 gigos-cpuflags 同套机制。
+#    第一行的标记让 gigos-mirror 知道这是自动值、可覆盖；用户删掉标记即固定为自己的值。
+#    注意：这与构建时用的源无关，构建机在香港直连官方源(见 build-and-deploy.sh / config)。
 {
     echo '# gigos-auto-mirror'
     echo '# 出厂基线(中国大陆);开机后 gigos-mirror.service 按系统语言覆盖。删除本行标记即停止自动覆盖。'
     echo 'GENTOO_MIRRORS="https://mirrors.aliyun.com/gentoo/ https://mirrors.tuna.tsinghua.edu.cn/gentoo/ https://mirrors.ustc.edu.cn/gentoo/ https://mirrors.bfsu.edu.cn/gentoo/"'
 } > "${MC}/mirror"
 
-# 5. 解除 nvidia.conf 对 nouveau 的静态黑名单,让双驱动共存。
+# 5. 解除 nvidia.conf 对 nouveau 的静态黑名单，让双驱动共存。
 #    nvidia-drivers ebuild 自带 /etc/modprobe.d/nvidia.conf,首行 `blacklist nouveau`
 #    会让整个系统(含 live)永远走不了 nouveau,这跟我们grub 默认 nouveau、
 #    选闭源项才上 nvidia的双驱动设计直接冲突(选默认项 nouveau 也起不来)。
-#    出厂注释掉这两行(ebuild 文件里明说可注释),改由 grub 内核参数动态切换:
-#      - 默认/nouveau 项:无 blacklist → nouveau 加载
+#    出厂注释掉这两行(ebuild 文件里明说可注释),改由 grub 内核参数动态切换：
+#      - 默认/nouveau 项：无 blacklist → nouveau 加载
 #      - 闭源 NVIDIA 项:cmdline modprobe.blacklist=nouveau → nvidia 接管
-#    这正是 EndeavourOS/CachyOS 的做法(不静态黑名单,靠加载顺序/cmdline)。
+#    这正是 EndeavourOS/CachyOS 的做法(不静态黑名单，靠加载顺序/cmdline)。
 NVCONF="${WORKDIR}/squashfs/etc/modprobe.d/nvidia.conf"
 if [ -f "${NVCONF}" ]; then
     sed -i 's/^blacklist nouveau/#blacklist nouveau/; s/^blacklist nova_core/#blacklist nova_core/' "${NVCONF}"
@@ -84,31 +84,31 @@ fi
 #    用 find -delete 而非 glob，空目录/不同 shell 下都可靠）。
 for d in binpkgs distfiles; do
     _cachedir="${WORKDIR}/squashfs/var/cache/${d}"
-    # 因为构建机把宿主的持久缓存 bind 挂载到了这两个目录,此时直接删会穿过 bind 把宿主缓存一起删掉,
-    # 下一锅只能从零编译(实测宿主 binpkg 缓存每锅后都被清空,冷构建要七个多小时)。
-    # squashfs 已由 exclude.txt 排除这两个目录,挂载状态下跳过不影响出厂结果。
+    # 因为构建机把宿主的持久缓存 bind 挂载到了这两个目录，此时直接删会穿过 bind 把宿主缓存一起删掉，
+    # 下一锅只能从零编译(实测宿主 binpkg 缓存每锅后都被清空，冷构建要七个多小时)。
+    # squashfs 已由 exclude.txt 排除这两个目录，挂载状态下跳过不影响出厂结果。
     if mountpoint -q "${_cachedir}" 2>/dev/null; then
-        echo "[99-sanitize] ${d} 是 bind 挂载的宿主缓存,跳过清理(exclude.txt 已排除,不会进 ISO)"
+        echo "[99-sanitize] ${d} 是 bind 挂载的宿主缓存，跳过清理(exclude.txt 已排除，不会进 ISO)"
         continue
     fi
     find "${_cachedir}" -mindepth 1 -delete 2>/dev/null || true
 done
 unset _cachedir
 
-# 7. 安全断言:装机后清理 live 残留(autologin / SSH 密码登录 / 桌面调试按钮 / polkit 免密)全靠
-#    calamares-settings-gig 的 shellprocess。打包前在此强校验契约确已接通,否则一旦指向 fork 失败
-#    或被上游覆盖,会出装好后仍残留 autologin 与 SSH 密码登录的后门盘。任一缺失即中止,不出后门盘。
+# 7. 安全断言：装机后清理 live 残留(autologin / SSH 密码登录 / 桌面调试按钮 / polkit 免密)全靠
+#    calamares-settings-gig 的 shellprocess。打包前在此强校验契约确已接通，否则一旦指向 fork 失败
+#    或被上游覆盖，会出装好后仍残留 autologin 与 SSH 密码登录的后门盘。任一缺失即中止，不出后门盘。
 CSGSP="${WORKDIR}/squashfs/etc/calamares/modules/shellprocess.conf"
 CSGSET="${WORKDIR}/squashfs/etc/calamares/settings.conf"
 for pat in "sddm.conf.d/kde_settings.conf" "49-calamares-nopasswd.rules" "00-gigos-passwordlogin.conf" "gigos-nosleep.desktop" "gigos-sudo-nopasswd.desktop"; do
-    grep -q "${pat}" "${CSGSP}" 2>/dev/null || { echo "[99-sanitize] 致命:calamares 装机清理缺 ${pat} → 装好系统会残留 live 后门,中止"; exit 1; }
+    grep -q "${pat}" "${CSGSP}" 2>/dev/null || { echo "[99-sanitize] 致命:calamares 装机清理缺 ${pat} → 装好系统会残留 live 后门，中止"; exit 1; }
 done
 grep -qE '^[[:space:]]*-[[:space:]]*shellprocess[[:space:]]*$' "${CSGSET}" 2>/dev/null || { echo "[99-sanitize] 致命:calamares settings.conf 未启用 shellprocess 清理步骤(清理不会跑)→ 中止"; exit 1; }
-echo "[99-sanitize] 安全断言通过:装机清理契约已接(autologin / SSH 密码登录 / polkit 残留会被 calamares 删除)"
+echo "[99-sanitize] 安全断言通过：装机清理契约已接(autologin / SSH 密码登录 / polkit 残留会被 calamares 删除)"
 
 # 7.5 settings.conf 排的每个模块,calamares 里都得真有。calamares 大版本会增删模块(3.3→3.4 就换过一轮),
-#      而 settings 是我们 fork 自己维护的:一旦排了个新版没有的模块,构建期一切正常、装机跑到那步才炸。
-#      这里在出锅前静态比对 `settings.conf` 的 sequence 与已装的 calamares 模块目录,不匹配就中止。
+#      而 settings 是我们 fork 自己维护的：一旦排了个新版没有的模块，构建期一切正常、装机跑到那步才炸。
+#      这里在出锅前静态比对 `settings.conf` 的 sequence 与已装的 calamares 模块目录，不匹配就中止。
 CALMODDIR=""
 for d in "${WORKDIR}/squashfs"/usr/lib64/calamares/modules "${WORKDIR}/squashfs"/usr/lib/calamares/modules; do
     [ -d "${d}" ] && { CALMODDIR="${d}"; break; }
@@ -123,67 +123,67 @@ if [ -f "${CSGSET}" ] && [ -n "${CALMODDIR}" ]; then
         [ -d "${CALMODDIR}/${m}" ] || ls "${CALMODDIR}/${m}".* >/dev/null 2>&1 || MISSMOD="${MISSMOD} ${m}"
     done
     [ -z "${MISSMOD}" ] \
-        || { echo "[99-sanitize] 致命:settings.conf 排了 calamares 里不存在的模块:${MISSMOD} → 装机跑到该步会炸,中止(calamares 升过大版本?对照 ${CALMODDIR##*/squashfs})"; exit 1; }
+        || { echo "[99-sanitize] 致命:settings.conf 排了 calamares 里不存在的模块：${MISSMOD} → 装机跑到该步会炸，中止(calamares 升过大版本？对照 ${CALMODDIR##*/squashfs})"; exit 1; }
     echo "[99-sanitize] 安全断言通过:settings.conf 的模块在本锅 calamares 中全部存在"
 else
-    echo "[99-sanitize] 提示:未找到 calamares 模块目录或 settings.conf,跳过模块比对"
+    echo "[99-sanitize] 提示：未找到 calamares 模块目录或 settings.conf,跳过模块比对"
 fi
 
-# 8. ZFS 根装机契约断言。仅当本锅确实装上了 ZBM 工具(generate-zbm 在 squashfs 内)才强校验,
-#    这样 --keep-going 下若 guru 偶发使 zfsbootmenu 被跳过,非 ZFS 盘照常出;但凡装了 ZBM,就必须保证
+# 8. ZFS 根装机契约断言。仅当本锅确实装上了 ZBM 工具(generate-zbm 在 squashfs 内)才强校验，
+#    这样 --keep-going 下若 guru 偶发使 zfsbootmenu 被跳过，非 ZFS 盘照常出；但凡装了 ZBM,就必须保证
 #    装机后处理脚本在位、settings 已接 shellprocess@zfs、且 ZBM config 启用了单文件 EFI,否则 ZFS 根装出
 #    不可启动盘。任一缺失即中止。
 SQROOT="${WORKDIR}/squashfs"
 if [ -x "${SQROOT}/usr/bin/generate-zbm" ] || [ -x "${SQROOT}/usr/sbin/generate-zbm" ]; then
     test -x "${SQROOT}/usr/local/bin/gigos-zfs-bootmenu.sh" \
-        || { echo "[99-sanitize] 致命:装了 ZBM 却缺 gigos-zfs-bootmenu.sh → ZFS 根装机无引导器,中止"; exit 1; }
+        || { echo "[99-sanitize] 致命：装了 ZBM 却缺 gigos-zfs-bootmenu.sh → ZFS 根装机无引导器，中止"; exit 1; }
     grep -qE '^[[:space:]]*-[[:space:]]*shellprocess@zfs[[:space:]]*$' "${CSGSET}" 2>/dev/null \
         || { echo "[99-sanitize] 致命:settings.conf 未接 shellprocess@zfs → ZFS 根装机不会装 ZBM,中止"; exit 1; }
     # shellprocess@zfs 必须接在 bootloader 之后(否则 GRUB 的 fallback EFI 会盖过 ZBM)
     awk '/^[[:space:]]*-[[:space:]]*bootloader[[:space:]]*$/{b=NR} /^[[:space:]]*-[[:space:]]*shellprocess@zfs[[:space:]]*$/{z=NR} END{exit !(b&&z&&z>b)}' "${CSGSET}" \
         || { echo "[99-sanitize] 致命:settings.conf 中 shellprocess@zfs 未排在 bootloader 之后 → GRUB fallback 会盖过 ZBM,中止"; exit 1; }
-    # shellprocess@zfspre 必须接在 bootloader 之前:它中和 grub-install。缺了它,ZFS 根上 grub-install 退 1、
-    # Calamares 在 bootloader 步就中止,后面 shellprocess@zfs 的整个 ZBM 安装根本不会跑 → 出不可启动盘。
+    # shellprocess@zfspre 必须接在 bootloader 之前：它中和 grub-install。缺了它,ZFS 根上 grub-install 退 1、
+    # Calamares 在 bootloader 步就中止，后面 shellprocess@zfs 的整个 ZBM 安装根本不会跑 → 出不可启动盘。
     grep -qE '^[[:space:]]*-[[:space:]]*shellprocess@zfspre[[:space:]]*$' "${CSGSET}" 2>/dev/null \
-        || { echo "[99-sanitize] 致命:settings.conf 未接 shellprocess@zfspre → ZFS 根装机 grub-install 会中止,中止"; exit 1; }
+        || { echo "[99-sanitize] 致命:settings.conf 未接 shellprocess@zfspre → ZFS 根装机 grub-install 会中止，中止"; exit 1; }
     awk '/^[[:space:]]*-[[:space:]]*shellprocess@zfspre[[:space:]]*$/{p=NR} /^[[:space:]]*-[[:space:]]*bootloader[[:space:]]*$/{b=NR} END{exit !(p&&b&&p<b)}' "${CSGSET}" \
-        || { echo "[99-sanitize] 致命:settings.conf 中 shellprocess@zfspre 未排在 bootloader 之前 → grub-install 会中止 ZFS 根装机,中止"; exit 1; }
+        || { echo "[99-sanitize] 致命:settings.conf 中 shellprocess@zfspre 未排在 bootloader 之前 → grub-install 会中止 ZFS 根装机，中止"; exit 1; }
     test -f "${SQROOT}/etc/zfsbootmenu/config.yaml" \
-        || { echo "[99-sanitize] 致命:缺 /etc/zfsbootmenu/config.yaml → generate-zbm 无法产单文件 EFI,中止"; exit 1; }
+        || { echo "[99-sanitize] 致命：缺 /etc/zfsbootmenu/config.yaml → generate-zbm 无法产单文件 EFI,中止"; exit 1; }
     grep -qE '^[[:space:]]*Enabled:[[:space:]]*true' "${SQROOT}/etc/zfsbootmenu/config.yaml" \
         || { echo "[99-sanitize] 致命:zfsbootmenu config.yaml 未启用 EFI(EFI.Enabled:true)→ 不出单文件 EFI,中止"; exit 1; }
-    # EFI stub 必须随 systemd[boot] 安装,否则 generate-zbm 装机时产不出单文件 EFI
+    # EFI stub 必须随 systemd[boot] 安装，否则 generate-zbm 装机时产不出单文件 EFI
     test -f "${SQROOT}/usr/lib/systemd/boot/efi/linuxx64.efi.stub" \
-        || echo "[99-sanitize] 警告:未见 systemd EFI stub(linuxx64.efi.stub)→ 确认 sys-apps/systemd 开了 boot USE,否则装机时 generate-zbm 产不出 EFI"
-    # 关键:zfs 用户态 + ZBM 都在,内核模块也必须真编进来了。内核超过 OpenZFS 支持上限(Linux-Maximum)时
+        || echo "[99-sanitize] 警告：未见 systemd EFI stub(linuxx64.efi.stub)→ 确认 sys-apps/systemd 开了 boot USE,否则装机时 generate-zbm 产不出 EFI"
+    # 关键:zfs 用户态 + ZBM 都在，内核模块也必须真编进来了。内核超过 OpenZFS 支持上限(Linux-Maximum)时
     # zfs-kmod 会 configure 拒编、被 --keep-going 静默跳过 → 出锅 modprobe zfs 失败、根本装不了 ZFS(7.1.3 踩过)。
     KMODVER=$(ls "${SQROOT}/lib/modules" 2>/dev/null | sort -Vr | head -n1)
     { [ -n "${KMODVER}" ] && find "${SQROOT}/lib/modules/${KMODVER}" -name 'zfs.ko*' 2>/dev/null | grep -q .; } \
-        || { echo "[99-sanitize] 致命:装了 ZFS 用户态/ZBM 但内核 ${KMODVER:-?} 没有 zfs.ko(内核多半超了 OpenZFS 支持上限、zfs-kmod 被静默跳过)→ 出锅装不了 ZFS,中止(见 package.mask/kernel-zfs 的内核钉版)"; exit 1; }
+        || { echo "[99-sanitize] 致命：装了 ZFS 用户态/ZBM 但内核 ${KMODVER:-?} 没有 zfs.ko(内核多半超了 OpenZFS 支持上限、zfs-kmod 被静默跳过)→ 出锅装不了 ZFS,中止(见 package.mask/kernel-zfs 的内核钉版)"; exit 1; }
     find "${SQROOT}/lib/modules/${KMODVER}" -name 'spl.ko*' 2>/dev/null | grep -q . \
-        || echo "[99-sanitize] 提示:${KMODVER} 有 zfs.ko 但无独立 spl.ko(较新 OpenZFS 把 spl 并进 zfs.ko,正常)"
-    # userland 与内核模块必须同版本(版本不齐 ZFS 就不能用,单查 zfs.ko 在不在会漏掉)。
-    # 上游 >=2.4.1 起把 kmod 合并进 sys-fs/zfs(USE 里带 modules),一个包出用户态和模块、天然同版本,
+        || echo "[99-sanitize] 提示：${KMODVER} 有 zfs.ko 但无独立 spl.ko(较新 OpenZFS 把 spl 并进 zfs.ko,正常)"
+    # userland 与内核模块必须同版本(版本不齐 ZFS 就不能用，单查 zfs.ko 在不在会漏掉)。
+    # 上游 >=2.4.1 起把 kmod 合并进 sys-fs/zfs(USE 里带 modules),一个包出用户态和模块、天然同版本，
     # 此时没有独立的 sys-fs/zfs-kmod,再拿它比对会把好锅误判成致命。故按已装 zfs 的 USE 自动分流。
     ZV=$(ls -d "${SQROOT}"/var/db/pkg/sys-fs/zfs-[0-9]* 2>/dev/null | head -1 | sed -E 's#.*/zfs-##')
     ZKV=$(ls -d "${SQROOT}"/var/db/pkg/sys-fs/zfs-kmod-[0-9]* 2>/dev/null | head -1 | sed -E 's#.*/zfs-kmod-##')
     ZUSE=" $(cat "${SQROOT}"/var/db/pkg/sys-fs/zfs-[0-9]*/USE 2>/dev/null | head -1) "
-    [ -n "${ZV}" ] || { echo "[99-sanitize] 致命:squashfs 里没装 sys-fs/zfs 却有 ZBM → ZFS 不能用,中止"; exit 1; }
+    [ -n "${ZV}" ] || { echo "[99-sanitize] 致命:squashfs 里没装 sys-fs/zfs 却有 ZBM → ZFS 不能用，中止"; exit 1; }
     case "${ZUSE}" in
         *" modules "*)
-            # 合并版:模块由 zfs 自己出。zfs.ko 上面已断言存在;这里只再确认没混进旧的独立 kmod 包。
+            # 合并版：模块由 zfs 自己出。zfs.ko 上面已断言存在；这里只再确认没混进旧的独立 kmod 包。
             [ -z "${ZKV}" ] \
-                || { echo "[99-sanitize] 致命:zfs-${ZV} 已自带模块(USE=modules),却又装了独立 sys-fs/zfs-kmod-${ZKV} → 两份模块会打架,中止"; exit 1; }
+                || { echo "[99-sanitize] 致命:zfs-${ZV} 已自带模块(USE=modules),却又装了独立 sys-fs/zfs-kmod-${ZKV} → 两份模块会打架，中止"; exit 1; }
             ZMODE="合并版 zfs-${ZV}[modules]" ;;
         *)
-            # 旧拆分结构:两个包必须同版本。
+            # 旧拆分结构：两个包必须同版本。
             [ "${ZV}" = "${ZKV}" ] \
-                || { echo "[99-sanitize] 致命:zfs userland(${ZV}) 与 zfs-kmod(${ZKV:-无}) 版本不一致 → ZFS 不能用,中止(见 package.mask/kernel-zfs 的 ZFS 钉版)"; exit 1; }
+                || { echo "[99-sanitize] 致命:zfs userland(${ZV}) 与 zfs-kmod(${ZKV:-无}) 版本不一致 → ZFS 不能用，中止(见 package.mask/kernel-zfs 的 ZFS 钉版)"; exit 1; }
             ZMODE="拆分版 userland=kmod=${ZV}" ;;
     esac
     echo "[99-sanitize] 安全断言通过:ZFS 根装机契约已接(zfs.ko 在 ${KMODVER}、${ZMODE}、ZBM 工具/脚本/序列/config 齐备、shellprocess@zfs 在 bootloader 之后)"
 else
-    echo "[99-sanitize] 提示:本锅未含 generate-zbm(zfsbootmenu 未装,可能 --keep-going 跳过)→ 跳过 ZFS 根装机断言;ZFS 根安装将不可启动,非 ZFS 安装不受影响"
+    echo "[99-sanitize] 提示：本锅未含 generate-zbm(zfsbootmenu 未装，可能 --keep-going 跳过)→ 跳过 ZFS 根装机断言;ZFS 根安装将不可启动，非 ZFS 安装不受影响"
 fi
 
 echo "[99-sanitize] 出厂清理完成：MAKEOPTS 自适应、CPU_FLAGS 按用户机生成、镜像源设为阿里云、解除 nouveau 静态黑名单、构建调优与缓存已移除"
