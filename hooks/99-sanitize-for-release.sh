@@ -184,4 +184,4 @@ else
     echo "[99-sanitize] 提示：本锅未含 generate-zbm(zfsbootmenu 未装，可能 --keep-going 跳过)→ 跳过 ZFS 根装机断言;ZFS 根安装将不可启动，非 ZFS 安装不受影响"
 fi
 
-echo "[99-sanitize] 出厂清理完成：MAKEOPTS 自适应、CPU_FLAGS 按用户机生成、镜像源设为阿里云、解除 nouveau 静态黑名单、构建调优与缓存已移除"
+echo "[99-sanitize] 出厂清理完成：MAKEOPTS 自适应、CPU_FLAGS 按用户机生成、镜像源设为海外基线(开机按出口 IP 或语言改写)、解除 nouveau 静态黑名单、构建调优与缓存已移除"
