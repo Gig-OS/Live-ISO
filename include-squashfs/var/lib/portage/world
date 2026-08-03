@@ -35,6 +35,9 @@ sys-process/btop
 media-fonts/noto-cjk
 www-client/firefox-bin
 net-proxy/flclash
+# 社区 binhost 的签名公钥。binrepos.conf 里 verify-signature = true 要用它验签，
+# 缺了会让来自该源的包一律验签失败。放进 world 免得被 depclean 清掉。
+sec-keys/openpgp-keys-gentoozh
 x11-misc/sddm
 # 文件系统/分区工具，保证 Calamares 能格式化对应类型、支持 LUKS/LVM 安装
 sys-fs/xfsprogs

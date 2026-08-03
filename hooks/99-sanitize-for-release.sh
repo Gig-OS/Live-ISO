@@ -58,7 +58,8 @@ CPUF
 
 # 出厂不带 gigos-mirror 运行期生成的 repos.conf 覆盖文件。它按开机时判定的地区写，
 # 烘进 ISO 会让所有人拿到构建机所在地区的源，且首启前就带上无从核对的地址。
-rm -f "${WORKDIR}/squashfs/etc/portage/repos.conf/zz-gigos-mirror.conf"
+rm -f "${WORKDIR}/squashfs/etc/portage/repos.conf/zz-gigos-mirror.conf" \
+      "${WORKDIR}/squashfs/etc/portage/binrepos.conf/gentoo-zh.conf"
 
 # 5. 解除 nvidia.conf 对 nouveau 的静态黑名单。
 #    nvidia-drivers 自带的 /etc/modprobe.d/nvidia.conf 首行 `blacklist nouveau` 会让整个

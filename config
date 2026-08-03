@@ -32,4 +32,5 @@ OVERLAYS=(
 EXTRA_PKGS=(
     app-admin/calamares-settings-gig
     net-proxy/flclash
+    sec-keys/openpgp-keys-gentoozh
 )

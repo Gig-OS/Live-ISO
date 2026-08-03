@@ -1,0 +1,4 @@
+# 允许从 binrepos.conf 里配的二进制包源取包。逐包判断：记录的 profile 与 USE 与本机一致
+# 才采用，不一致的照常编译源码，所以社区 binhost 与本 ISO 的 profile 不完全相同也不影响，
+# 只是命中率低一些。用 emerge -pv 看，前缀是 [binary] 才表示走了二进制。
+FEATURES="${FEATURES} getbinpkg"

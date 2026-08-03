@@ -19,9 +19,10 @@ set -u
 MARK='# gigos-auto-mirror'
 MC=/etc/portage/make.conf/mirror
 RC=/etc/portage/repos.conf/zz-gigos-mirror.conf
+BR=/etc/portage/binrepos.conf/gentoo-zh.conf
 
 # 任一目标文件被用户改过就整体退出，不做半套覆盖
-for f in "$MC" "$RC"; do
+for f in "$MC" "$RC" "$BR"; do
     if [ -e "$f" ] && ! grep -q "$MARK" "$f"; then
         exit 0
     fi
@@ -57,6 +58,7 @@ case "$REGION" in
         MIRRORS="https://mirrors.ustc.edu.cn/gentoo/ https://mirrors.bfsu.edu.cn/gentoo/ https://mirrors.tuna.tsinghua.edu.cn/gentoo/ https://mirrors.aliyun.com/gentoo/"
         # 社区 overlay 的源码 tarball。追加在官方源之后，只补 gentoo-zh 里那些包，不替代官方源。
         ZH_DIST="https://mirrors.cernet.edu.cn/gentoo-zh https://mirror.nju.edu.cn/gentoo-zh https://mirror.nyist.edu.cn/gentoo-zh https://distfiles.gentoozh.org"
+        ZH_BIN="https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64"
         # 只有 gentoo 与 gentoo-zh 有国内 git 镜像。guru 在清华、中科大、北外、CERNET 上都没有，
         # gig 是社区自有仓库也无镜像，两者保持出厂的 GitHub 地址。
         GIT_GENTOO="https://mirrors.cernet.edu.cn/gentoo-portage.git"
@@ -66,6 +68,7 @@ case "$REGION" in
         DESC="台湾 / 香港"
         MIRRORS="http://ftp.twaren.net/Linux/Gentoo/ https://tw.mirrors.cicku.me/gentoo/ https://hk.mirrors.cicku.me/gentoo/ https://mirror.xtom.com.hk/gentoo/"
         ZH_DIST="https://distfiles.gentoozh.org"
+        ZH_BIN="https://distfiles.gentoozh.org/binpkgs/x86-64"
         # 当地没有实测可用的 Portage 树 git 镜像，GitHub 可直连，保持出厂值，不用大陆源。
         GIT_GENTOO=""
         GIT_ZH=""
@@ -74,6 +77,7 @@ case "$REGION" in
         DESC="全球 / 海外"
         MIRRORS="https://distfiles.gentoo.org/ https://gentoo.osuosl.org/ https://ftp.fau.de/gentoo/"
         ZH_DIST="https://distfiles.gentoozh.org"
+        ZH_BIN="https://distfiles.gentoozh.org/binpkgs/x86-64"
         GIT_GENTOO=""
         GIT_ZH=""
         ;;
@@ -88,7 +92,7 @@ fi
 mkdir -p /etc/portage/make.conf /etc/portage/repos.conf
 {
     echo "$MARK"
-    echo "# 由 gigos-mirror 按${SRC}判定为${DESC}，自动选就近镜像。"
+    echo "# 由 gigos-mirror 按${SRC} 判定为 ${DESC}，自动选就近镜像。"
     echo "# 删除上面这行标记即停止自动覆盖，可改成自己的值(或执行 \`mirrorselect -s4 -b10 -o >> 本文件\`)。"
     printf 'GENTOO_MIRRORS="%s %s"\n' "$MIRRORS" "$ZH_DIST"
 } > "$MC"
@@ -97,7 +101,7 @@ mkdir -p /etc/portage/make.conf /etc/portage/repos.conf
 if [ -n "$GIT_GENTOO" ] || [ -n "$GIT_ZH" ]; then
     {
         echo "$MARK"
-        echo "# 由 gigos-mirror 按${SRC}判定为${DESC}，覆盖 Portage 树与 gentoo-zh 的 git 同步地址。"
+        echo "# 由 gigos-mirror 按${SRC} 判定为 ${DESC}，覆盖 Portage 树与 gentoo-zh 的 git 同步地址。"
         echo "# 删除上面这行标记即停止自动覆盖。repos.conf/ 按字母序加载，本文件排在出厂文件之后。"
         [ -n "$GIT_GENTOO" ] && printf '\n[gentoo]\nsync-uri = %s\n' "$GIT_GENTOO"
         [ -n "$GIT_ZH" ] && printf '\n[gentoo-zh]\nsync-uri = %s\n' "$GIT_ZH"
@@ -105,3 +109,18 @@ if [ -n "$GIT_GENTOO" ] || [ -n "$GIT_ZH" ]; then
 elif [ -e "$RC" ] && grep -q "$MARK" "$RC"; then
     rm -f "$RC"
 fi
+
+# 社区二进制包源。portage 逐包判断，profile 与 USE 匹配的走二进制，不匹配的照常编译，
+# 所以这里配上不会有副作用。验签公钥与信任由构建期的 06-binhost-trust hook 备好。
+mkdir -p /etc/portage/binrepos.conf
+{
+    echo "$MARK"
+    echo "# 由 gigos-mirror 按${SRC} 判定为 ${DESC}，选就近的二进制包源。"
+    echo "# 删除上面这行标记即停止自动覆盖；删掉整个文件即不再使用社区二进制包。"
+    echo
+    echo '[gentoo-zh]'
+    echo "sync-uri = ${ZH_BIN}"
+    echo 'priority = 10'
+    echo 'verify-signature = true'
+    echo 'location = /var/cache/binhost/gentoo-zh'
+} > "$BR"
