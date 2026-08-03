@@ -48,7 +48,7 @@ CPU_FLAGS_X86="aes avx avx2 f16c fma3 mmx mmxext pclmul popcnt rdrand sse sse2 s
 CPUF
 
 # 4. GENTOO_MIRRORS 写带标记的海外基线，开机后由 gigos-mirror.service 按出口 IP 国家码
-#    改成就近镜像，取不到国家码再按系统语言，机制与 gigos-cpuflags 相同。
+#    改成就近镜像，无法取得国家码时再按系统语言，机制与 gigos-cpuflags 相同。
 #    标记表示这是自动值，用户删掉即固定。与构建时用的源无关。
 {
     echo '# gigos-auto-mirror'
