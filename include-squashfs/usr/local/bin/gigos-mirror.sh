@@ -7,7 +7,7 @@
 #
 # 注:make.conf/ 下文件按字母序加载，'mirror' 在 'common' 之后 → 这里的 GENTOO_MIRRORS
 # 覆盖 common 的兜底值。镜像只决定从哪拉 distfiles/源码包，与系统语言/区域无强绑定，
-# 用语言做就近猜测、并允许用户一键改，是省事又不锁死的折中。
+# 用语言做就近猜测、并允许用户一键改，是减少维护又不锁死的折中。
 set -u
 F=/etc/portage/make.conf/mirror
 MARK='# gigos-auto-mirror'
