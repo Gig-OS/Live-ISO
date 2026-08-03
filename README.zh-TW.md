@@ -48,7 +48,13 @@ sudo CORES=32 TMPFS=80G ./build.sh
 
 ## overlay 與額外套件
 
-`config` 的 `OVERLAYS` 定義要加的 overlay，`EXTRA_PKGS` 定義額外安裝的套件。目前用到三個 overlay：`gig` 提供 `calamares-settings-gig`，`gentoo-zh` 與 `guru` 提供 `flclash` 等非安裝必需的套件。
+`config` 的 `OVERLAYS` 定義要加的 overlay，`EXTRA_PKGS` 定義額外安裝的套件。三個 overlay 各自的作用不同：
+
+| overlay | 建置期提供 | 能否去掉 |
+|---|---|---|
+| `gig` | `calamares-settings-gig`、`flclash` | 不能，安裝器設定在這裡 |
+| `guru` | `sys-boot/zfsbootmenu` | 不能，ZFS 根開機只有它有 |
+| `gentoo-zh` | 建置期幾乎不用，只被拉進一個 virtual | 保留，它是裝好系統後使用者取中文套件的來源 |
 
 ## 出廠清理
 

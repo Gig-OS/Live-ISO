@@ -59,9 +59,14 @@ no release logic.
 
 ## Overlays and extra packages
 
-`OVERLAYS` in `config` lists the overlays to add and `EXTRA_PKGS` the additional packages. Three
-overlays are used: `gig` provides `calamares-settings-gig`, while `gentoo-zh` and `guru` provide
-`flclash` and other packages that are not required to install the system.
+`OVERLAYS` in `config` lists the overlays to add and `EXTRA_PKGS` the additional packages. The three
+overlays serve different purposes:
+
+| Overlay | Provides at build time | Removable |
+|---|---|---|
+| `gig` | `calamares-settings-gig`, `flclash` | No, the installer configuration lives here |
+| `guru` | `sys-boot/zfsbootmenu` | No, nothing else ships a ZFS root bootloader |
+| `gentoo-zh` | Barely used at build time; one virtual is pulled from it | Keep it: it is where users get Chinese packages after installing |
 
 ## Release sanitisation
 
