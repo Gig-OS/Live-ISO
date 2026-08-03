@@ -52,12 +52,12 @@ CPUF
 #    标记表示这是自动值，用户删掉即固定。与构建时用的源无关。
 {
     echo '# gigos-auto-mirror'
-    echo '# 出厂基线是海外源;开机后 gigos-mirror.service 按出口 IP 或系统语言覆盖。删除本行标记即停止自动覆盖。'
+    echo '# 出厂基线是海外源，开机后 gigos-mirror.service 按出口 IP 或系统语言覆盖。删除本行标记即停止自动覆盖。'
     echo 'GENTOO_MIRRORS="https://distfiles.gentoo.org/ https://gentoo.osuosl.org/ https://ftp.fau.de/gentoo/"'
 } > "${MC}/mirror"
 
 # 出厂不带 gigos-mirror 运行期生成的 repos.conf 覆盖文件。它按开机时判定的地区写，
-# 烘进 ISO 会让所有人拿到构建机所在地区的源，且首启前就带上无从核对的地址。
+# 烘进 ISO 会把构建机所在地区的源发给所有人，且首启前就带上无从核对的地址。
 rm -f "${WORKDIR}/squashfs/etc/portage/repos.conf/zz-gigos-mirror.conf" \
       "${WORKDIR}/squashfs/etc/portage/binrepos.conf/gentoo-zh.conf"
 
@@ -120,7 +120,7 @@ else
     echo "[99-sanitize] 提示：未找到 calamares 模块目录或 settings.conf,跳过模块比对"
 fi
 
-# 8. ZFS 根装机契约断言。只在本锅确实装上 generate-zbm 时强校验，这样 --keep-going 下
+# 8. ZFS 根装机契约断言。只在本锅确实安装了 generate-zbm 时强校验，这样 --keep-going 下
 #    zfsbootmenu 被跳过时非 ZFS 盘照常出。装了 ZBM 就必须保证装机后处理脚本在位、
 #    settings 已接 shellprocess@zfs、config 启用单文件 EFI，任一缺失即中止，
 #    否则 ZFS 根会装出不可启动盘。
@@ -134,7 +134,7 @@ if [ -x "${SQROOT}/usr/bin/generate-zbm" ] || [ -x "${SQROOT}/usr/sbin/generate-
     awk '/^[[:space:]]*-[[:space:]]*bootloader[[:space:]]*$/{b=NR} /^[[:space:]]*-[[:space:]]*shellprocess@zfs[[:space:]]*$/{z=NR} END{exit !(b&&z&&z>b)}' "${CSGSET}" \
         || { echo "[99-sanitize] 致命:settings.conf 中 shellprocess@zfs 未排在 bootloader 之后 → GRUB fallback 会盖过 ZBM,中止"; exit 1; }
     # shellprocess@zfspre 必须接在 bootloader 之前：它中和 grub-install。缺了它,ZFS 根上 grub-install 退 1、
-    # Calamares 在 bootloader 步就中止，后面 shellprocess@zfs 的整个 ZBM 安装根本不会跑 → 出不可启动盘。
+    # Calamares 在 bootloader 步就中止，后面 shellprocess@zfs 的整个 ZBM 安装根本不会执行 → 出不可启动盘。
     grep -qE '^[[:space:]]*-[[:space:]]*shellprocess@zfspre[[:space:]]*$' "${CSGSET}" 2>/dev/null \
         || { echo "[99-sanitize] 致命:settings.conf 未接 shellprocess@zfspre → ZFS 根装机 grub-install 会中止，中止"; exit 1; }
     awk '/^[[:space:]]*-[[:space:]]*shellprocess@zfspre[[:space:]]*$/{p=NR} /^[[:space:]]*-[[:space:]]*bootloader[[:space:]]*$/{b=NR} END{exit !(p&&b&&p<b)}' "${CSGSET}" \
