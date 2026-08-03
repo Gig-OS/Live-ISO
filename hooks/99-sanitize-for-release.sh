@@ -146,8 +146,15 @@ if [ -x "${SQROOT}/usr/bin/generate-zbm" ] || [ -x "${SQROOT}/usr/sbin/generate-
     # EFI stub 必须随 systemd[boot] 安装，否则 generate-zbm 装机时产不出单文件 EFI
     test -f "${SQROOT}/usr/lib/systemd/boot/efi/linuxx64.efi.stub" \
         || echo "[99-sanitize] 警告：未见 systemd EFI stub(linuxx64.efi.stub)→ 确认 sys-apps/systemd 开了 boot USE,否则装机时 generate-zbm 产不出 EFI"
+    # 出锅只能有一个内核。virtual/dist-kernel 有多个 provider(gentoo-kernel-bin、vanilla-kernel、
+    # gentoo-kernel-modprep…)，package.mask 漏钉任何一个，-uD @world 就会挑版本最高的那个装进来，
+    # 于是多出一个超 OpenZFS 上限、没有 zfs.ko 的内核。下面按最高版查 zfs.ko 会因此致命中止，
+    # 但报的是 zfs 缺模块，看不出真因，所以先在这里点名。
+    NKERN=$(ls -1 "${SQROOT}/lib/modules" 2>/dev/null | wc -l)
+    [ "${NKERN}" -le 1 ] \
+        || { echo "[99-sanitize] 致命：装了 ${NKERN} 个内核($(ls "${SQROOT}/lib/modules" | tr '\n' ' '))→ package.mask/kernel-zfs 漏钉了某个 virtual/dist-kernel 的 provider,中止"; exit 1; }
     # 关键:zfs 用户态 + ZBM 都在，内核模块也必须真编进来了。内核超过 OpenZFS 支持上限(Linux-Maximum)时
-    # zfs-kmod 会 configure 拒编、被 --keep-going 静默跳过 → 出锅 modprobe zfs 失败、根本装不了 ZFS(7.1.3 踩过)。
+    # zfs-kmod 会 configure 拒编、被 --keep-going 静默跳过 → 出锅 modprobe zfs 失败、根本装不了 ZFS。
     KMODVER=$(ls "${SQROOT}/lib/modules" 2>/dev/null | sort -Vr | head -n1)
     { [ -n "${KMODVER}" ] && find "${SQROOT}/lib/modules/${KMODVER}" -name 'zfs.ko*' 2>/dev/null | grep -q .; } \
         || { echo "[99-sanitize] 致命：装了 ZFS 用户态/ZBM 但内核 ${KMODVER:-?} 没有 zfs.ko(内核多半超了 OpenZFS 支持上限、zfs-kmod 被静默跳过)→ 出锅装不了 ZFS,中止(见 package.mask/kernel-zfs 的内核钉版)"; exit 1; }

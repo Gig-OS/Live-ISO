@@ -273,14 +273,17 @@ mkdir -p "${WORKDIR}/squashfs/etc/portage/package.mask"
 cat > "${WORKDIR}/squashfs/etc/portage/package.mask/kernel-zfs" <<MASKEOF
 # 本文件由 build.sh 每锅动态生成：钉最新 amd64-stable gcc + 内核 + zfs,免手工维护(改法见 build.sh 生成它那段)。
 # 本锅算得:gcc ${GSTAB}、内核 ${KSTAB}、zfs ${ZSTAB}。mask 掉算出的 stable 版之上的测试版,portage 停在 stable。
-# vanilla-kernel 必须一起 mask：sys-fs/zfs[dist-kernel] 依赖无版本的 virtual/dist-kernel，
-# -uD @world 会挑版本最高的 provider。只钉 gentoo-kernel-bin 时 vanilla-kernel 会被拖来，
-# 装出第二个超 OpenZFS 上限且无 zfs.ko 的内核。两个都钉到 ${KSTAB}，provider 就只剩前者。
+# sys-fs/zfs[dist-kernel] 依赖无版本的 virtual/dist-kernel，-uD @world 会挑版本最高的 provider。
+# 所以每一个 provider 都要钉，漏一个就会装出第二个超 OpenZFS 上限、没有 zfs.ko 的内核。
+# gentoo-kernel-modprep 也是 provider，它只铺模块树不装 vmlinuz，被选中时 linux-firmware 的
+# postinst 会因找不到 vmlinuz 而失败。直接把 virtual/dist-kernel 本身也钉上，多一道保险。
 >sys-devel/gcc-${GSTAB}
 >sys-kernel/gentoo-kernel-bin-${KSTAB}
 >sys-kernel/gentoo-kernel-${KSTAB}
 >sys-kernel/gentoo-sources-${KSTAB}
 >sys-kernel/vanilla-kernel-${KSTAB}
+>sys-kernel/gentoo-kernel-modprep-${KSTAB}
+>virtual/dist-kernel-${KSTAB}
 >sys-fs/zfs-${ZSTAB}
 MASKEOF
 # 旧拆分结构才需要连 zfs-kmod 一起钉(合并版没有这个包，写了也没意义)。
