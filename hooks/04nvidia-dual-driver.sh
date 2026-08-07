@@ -5,8 +5,8 @@
 # 必须注释掉这条静态黑名单，否则默认启动时 nouveau 无法加载并黑屏。
 NVCONF="${WORKDIR}/squashfs/etc/modprobe.d/nvidia.conf"
 if [ -f "${NVCONF}" ]; then
-    sed -i 's/^[[:space:]]*blacklist[[:space:]]\+nouveau/#&/' "${NVCONF}"
-    echo "[04nvidia] 已注释 nvidia.conf 的 blacklist nouveau(默认 nouveau,nvidia 由 grub 项启用)"
+    sed -i 's/^[[:space:]]*blacklist[[:space:]]\+\(nouveau\|nova_core\)/#&/' "${NVCONF}"
+    echo "[04nvidia] 已注释 nvidia.conf 的 blacklist nouveau 与 nova_core(默认开源驱动,nvidia 由 grub 项启用)"
 else
     echo "[04nvidia] 未找到 ${NVCONF}(nvidia-drivers 可能没装，跳过)"
 fi

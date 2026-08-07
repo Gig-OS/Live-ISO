@@ -54,14 +54,8 @@ CPUF
 rm -f "${WORKDIR}/squashfs/etc/portage/repos.conf/zz-gigos-mirror.conf" \
       "${WORKDIR}/squashfs/etc/portage/binrepos.conf/gentoo-zh.conf"
 
-# 5. 解除 nvidia.conf 对 nouveau 的静态黑名单。nvidia-drivers 自带的 /etc/modprobe.d/nvidia.conf
-#    中的 `blacklist nouveau` 会让整个系统无法使用 nouveau，与默认 nouveau、选闭源启动项才启用
-#    nvidia 的双驱动设计冲突。注释掉后改由 grub 内核参数切换：默认项不加 blacklist 使用 nouveau，
-#    闭源项用 modprobe.blacklist=nouveau 让 nvidia 接管。
-NVCONF="${WORKDIR}/squashfs/etc/modprobe.d/nvidia.conf"
-if [ -f "${NVCONF}" ]; then
-    sed -i 's/^blacklist nouveau/#blacklist nouveau/; s/^blacklist nova_core/#blacklist nova_core/' "${NVCONF}"
-fi
+# 解除 nvidia.conf 静态黑名单这件事在 hooks/04nvidia-dual-driver.sh，它先于本文件执行。
+# 原先此处也有一份，但 04 已把行首改成 `#blacklist`，这里的 `^blacklist` 再也匹配不到，是死代码。
 
 # 6. 清空二进制包与源码缓存。exclude.txt 已排除这两个目录，此处是第二道保险；
 #    用 find -delete 而非 glob，空目录与不同 shell 下都可靠。
