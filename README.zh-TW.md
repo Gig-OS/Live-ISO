@@ -46,6 +46,10 @@ sudo CORES=32 TMPFS=80G ./build.sh
 | `include-iso/` | 複製到 ISO 根的檔案，含 GRUB 選單 |
 | `exclude.txt` | 打包 squashfs 時排除的路徑 |
 
+`include-squashfs/etc/kernel/install.d/05-check-chroot.install` **必須保持零位元組、不可執行**。
+`kernel-install` 讓 `/etc` 下的同名檔案覆蓋 `/usr/lib` 下的，上游那個 hook 在 chroot 內會拒絕
+安裝核心並在自己的提示裡給出這個做法。加任何內容都會破壞它，說明只能寫在這裡。
+
 ## overlay 與額外套件
 
 `config` 的 `OVERLAYS` 定義要加的 overlay，`EXTRA_PKGS` 定義額外安裝的套件。三個 overlay 各自的作用不同：

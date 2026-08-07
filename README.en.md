@@ -57,6 +57,11 @@ no release logic.
 | `include-iso/` | Files copied to the ISO root, including the GRUB menu |
 | `exclude.txt` | Paths excluded when packing the squashfs |
 
+`include-squashfs/etc/kernel/install.d/05-check-chroot.install` **must stay empty and
+non-executable**. `kernel-install` lets a file in `/etc` override the same name under `/usr/lib`,
+and the upstream hook, which refuses to install a kernel inside a chroot, suggests exactly this in
+its own message. Any content breaks it, so the explanation has to live here.
+
 ## Overlays and extra packages
 
 `OVERLAYS` in `config` lists the overlays to add and `EXTRA_PKGS` the additional packages. The three
