@@ -59,8 +59,7 @@ case "$REGION" in
         # 社区 overlay 的源码 tarball。追加在官方源之后，只补 gentoo-zh 里那些包，不替代官方源。
         ZH_DIST="https://mirrors.cernet.edu.cn/gentoo-zh https://mirror.nju.edu.cn/gentoo-zh https://mirror.nyist.edu.cn/gentoo-zh https://distfiles.gentoozh.org"
         ZH_BIN="https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64"
-        # 只有 gentoo 与 gentoo-zh 有国内 git 镜像。guru 在清华、中科大、北外、CERNET 上都没有，
-        # gig 是社区自有仓库也无镜像，两者保持出厂的 GitHub 地址。
+        # 只有 gentoo 与 gentoo-zh 有国内 git 镜像。gig 是社区自有仓库无镜像，保持 GitHub。
         GIT_GENTOO="https://mirrors.cernet.edu.cn/gentoo-portage.git"
         GIT_ZH="https://mirrors.cernet.edu.cn/gentoo-zh.git"
         ;;

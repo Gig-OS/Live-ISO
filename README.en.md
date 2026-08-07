@@ -62,11 +62,13 @@ no release logic.
 `OVERLAYS` in `config` lists the overlays to add and `EXTRA_PKGS` the additional packages. The three
 overlays serve different purposes:
 
-| Overlay | Provides at build time | Removable |
-|---|---|---|
-| `gig` | `calamares-settings-gig`, `flclash` | No, the installer configuration lives here |
-| `guru` | `sys-boot/zfsbootmenu` | No, nothing else ships a ZFS root bootloader |
-| `gentoo-zh` | Barely used at build time; one virtual is pulled from it | Keep it: it is where users get Chinese packages after installing |
+| Overlay | Provides at build time |
+|---|---|
+| `gig` | `calamares-settings-gig`, `flclash` |
+| `gentoo-zh` | `sys-boot/zfsbootmenu`, plus the Chinese packages users install afterwards |
+
+`guru` was dropped on 2026-08-07. It only ever provided `sys-boot/zfsbootmenu`, which `gentoo-zh` now
+carries at the same 3.1.0 with all dependencies in the main tree.
 
 ## Release sanitisation
 
