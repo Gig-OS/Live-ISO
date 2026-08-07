@@ -139,8 +139,16 @@ if [ -x "${SQROOT}/usr/bin/generate-zbm" ] || [ -x "${SQROOT}/usr/sbin/generate-
     # zfs 用户态与 ZBM 都在时，内核模块也必须已编入。内核超过 OpenZFS 支持上限（Linux-Maximum）时
     # zfs-kmod 在 configure 阶段拒绝编译并被 --keep-going 静默跳过，出厂后 modprobe zfs 失败、无法安装 ZFS。
     KMODVER=$(ls "${SQROOT}/lib/modules" 2>/dev/null | sort -Vr | head -n1)
-    { [ -n "${KMODVER}" ] && find "${SQROOT}/lib/modules/${KMODVER}" -name 'zfs.ko*' 2>/dev/null | grep -q .; } \
-        || { echo "[99-sanitize] 致命：装了 ZFS 用户态/ZBM 但内核 ${KMODVER:-?} 没有 zfs.ko(内核多半超了 OpenZFS 支持上限、zfs-kmod 被静默跳过)→ 出厂装不了 ZFS,中止(见 package.mask/kernel-zfs 的内核钉版)"; exit 1; }
+    if ! { [ -n "${KMODVER}" ] && find "${SQROOT}/lib/modules/${KMODVER}" -name 'zfs.ko*' 2>/dev/null | grep -q .; }; then
+        WANTKV=$(grep -hoE '/lib/modules/[^/]+/extra/zfs\.ko' \
+                 "${SQROOT}"/var/db/pkg/sys-fs/zfs-[0-9]*/CONTENTS 2>/dev/null | head -n1 | cut -d/ -f4)
+        if [ -n "${WANTKV}" ] && [ "${WANTKV}" != "${KMODVER}" ]; then
+            echo "[99-sanitize] 致命：zfs 的模块编给内核 ${WANTKV}，本机内核是 ${KMODVER} → 装到了别处编的 binpkg,出厂装不了 ZFS,中止(build.sh 的 --usepkg-exclude 要盖住 sys-fs/zfs)"
+        else
+            echo "[99-sanitize] 致命：装了 ZFS 用户态/ZBM 但内核 ${KMODVER:-?} 没有 zfs.ko(内核多半超了 OpenZFS 支持上限、模块被静默跳过)→ 出厂装不了 ZFS,中止(见 package.mask/kernel-zfs 的内核钉版)"
+        fi
+        exit 1
+    fi
     find "${SQROOT}/lib/modules/${KMODVER}" -name 'spl.ko*' 2>/dev/null | grep -q . \
         || echo "[99-sanitize] 提示：${KMODVER} 有 zfs.ko 但无独立 spl.ko(较新 OpenZFS 把 spl 并进 zfs.ko,正常)"
     # 用户态与内核模块必须同版本，只查 zfs.ko 是否存在会漏掉版本不一致的情况。
