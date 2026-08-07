@@ -60,7 +60,8 @@ function crun () {
 	"${WORKDIR}"/arch-scripts/arch-chroot "${WORKDIR}/squashfs" bash -c "$*"
 }
 
-# 网络等瞬时失败自动重试，次数与间隔见 config。配合 binpkg 缓存，重试只重做失败的包。
+# 网络等瞬时失败自动重试，次数与间隔见 config。多数调用点配 binpkg 缓存，重试只重做失败的包；
+# EXTRA_PKGS 那步用 --usepkg=n，重试会全量重编。
 retry () {
     local n=1
     until "$@";do
@@ -106,7 +107,7 @@ if [ -d "${WORKDIR}/squashfs/var/db/repos/gentoo" ];then
     done
 else
     for n in {1..3};do
-        # 同 overlay clone:失败会留下半截目录，不清掉则后两次直接以 destination path
+        # 同 overlay clone:失败会留下半截目录，不清除则后两次直接以 destination path
         # already exists 失败，重试等于只有一次。
         rm -rf "${WORKDIR}/squashfs/var/db/repos/gentoo"
         if (git clone --depth=1 "${GITMIRROR}" "${WORKDIR}/squashfs/var/db/repos/gentoo");then
@@ -301,7 +302,7 @@ for ov in "${OVERLAYS[@]}";do
         git -C "${odst}" pull --ff-only || true
     else
         for n in 1 2 3;do
-            # 失败会留下半截目录，不清掉则后两次 clone 直接以 destination path
+            # 失败会留下半截目录，不清除则后两次 clone 直接以 destination path
             # already exists 失败，重试等于只有一次。
             rm -rf "${odst}"
             git clone --depth=1 "${ourl}" "${odst}" && break
