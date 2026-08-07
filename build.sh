@@ -106,6 +106,9 @@ if [ -d "${WORKDIR}/squashfs/var/db/repos/gentoo" ];then
     done
 else
     for n in {1..3};do
+        # 同 overlay clone:失败会留下半截目录，不清掉则后两次直接以 destination path
+        # already exists 失败，重试等于只有一次。
+        rm -rf "${WORKDIR}/squashfs/var/db/repos/gentoo"
         if (git clone --depth=1 "${GITMIRROR}" "${WORKDIR}/squashfs/var/db/repos/gentoo");then
             break;
         fi
