@@ -24,7 +24,7 @@ git clone -b KDE --recurse-submodules https://github.com/Gig-OS/Live-ISO.git
 sudo ./build.sh
 ```
 
-`build.sh` 是唯一入口，它持有 `/run/gigos-build.lock`，同一时刻只允许一锅在执行。构建选项在 `config`，全部写成 `: "${VAR:=默认值}"`，可以直接用环境变量覆盖而不改文件：
+`build.sh` 是唯一入口，它持有 `/run/gigos-build.lock`，同一时刻只允许一轮在执行。构建选项在 `config`，全部写成 `: "${VAR:=默认值}"`，可以直接用环境变量覆盖而不改文件：
 
 ```sh
 sudo CORES=32 TMPFS=80G ./build.sh

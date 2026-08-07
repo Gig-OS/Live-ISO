@@ -7,7 +7,7 @@
 # 导入后还要 lsign 一次，否则密钥虽在但不被信任，验签仍然不过。
 #
 # 在构建期做完，用户开箱即可用二进制包。任一步失败只警告不中止：验签配不上时 portage 会拒绝
-# 该源的包并改为编译源码，属可用的退化，不该让整锅构建失败。
+# 该源的包并改为编译源码，属可用的退化，不该让整轮构建失败。
 
 GIGOS_BINHOST_KEY=6A0726AF1476A2F382C6AC6638A0234EC16AD42E
 GIGOS_KEY_ASC=/usr/share/openpgp-keys/gentoozh.asc

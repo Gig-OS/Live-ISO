@@ -8,7 +8,7 @@ if ( ! grep -q ^zh_CN.UTF-8 ${WORKDIR}/squashfs/etc/locale.gen );then
     echo -e "en_US.UTF-8 UTF-8\nzh_CN.UTF-8 UTF-8\nzh_TW.UTF-8 UTF-8" >> ${WORKDIR}/squashfs/etc/locale.gen
     crun locale-gen
     # 兜底：并行 locale-gen(4 worker)偶发漏编大 CJK locale(zh_CN/zh_TW),致下一步
-    # eselect set zh_CN.utf8 报 `Target 无效`→ 整锅炸(见 build-20260615-013814)。
+    # eselect set zh_CN.utf8 报 `Target 无效`→ 整轮炸(见 build-20260615-013814)。
     # 无条件用串行 localedef 补齐并校验三个 locale(单 locale 内存小、确定性高；已编则覆盖，无害)。
     crun bash -c '
         for l in en_US zh_CN zh_TW; do localedef -i "$l" -f UTF-8 "${l}.UTF-8" || true; done

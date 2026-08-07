@@ -63,7 +63,7 @@ function crun () {
 	"${WORKDIR}"/arch-scripts/arch-chroot "${WORKDIR}/squashfs" bash -c "$*"
 }
 
-# 瞬时失败（网络/DNS 抽风等）自动重试，免得一次抖动毁掉整锅。次数/间隔见 config。
+# 瞬时失败（网络/DNS 抽风等）自动重试，免得一次抖动毁掉整轮。次数/间隔见 config。
 # 配 binpkg 缓存，重试只重做失败的包，已成功的走缓存跳过，代价小。
 retry () {
     local n=1
@@ -227,7 +227,7 @@ mounttmpfs
 # 生成 locale。locale.conf 是 zh_CN.UTF-8，未生成该 locale 时 btrfs-progs 的 man 走 sphinx
 # 调 setlocale('') 会抛 locale.Error，man 编译失败并连累依赖它的包。
 # 用 localedef 而不用 locale-gen：后者会把内建的 C.UTF-8 也算进去，纯 stage3 里编不出，
-# 以 `not all compiled` 中止整锅。localedef 遇字符集告警也可能返回非零，所以不看退出码，
+# 以 `not all compiled` 中止整轮。localedef 遇字符集告警也可能返回非零，所以不看退出码，
 # 改断言 zh_CN 确实生成。三语都要编进 locale-archive，verify-iso.sh 会硬查。
 crun localedef -i en_US -f UTF-8 en_US.UTF-8 || true
 crun localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
@@ -244,7 +244,7 @@ syncrepo
 # 升级会用 -D 拖来 gcc，晚了就先装进测试版。全局 ACCEPT_KEYWORDS="~amd64 *" 默认挑最新测试版，
 # 已知会拖来超 OpenZFS 上限的内核、RC 版 zfs 模块与编不过 btrfs-progs 的 gcc 快照。
 # 版本从刚同步的树的 md5-cache 读 newest_stable，不靠 ACCEPT_KEYWORDS，它是增量变量压不住。
-# 内核不超 zfs-kmod 上限、zfs 与 zfs-kmod 同版本这两条由 99-sanitize 出锅前硬断言兜底。
+# 内核不超 zfs-kmod 上限、zfs 与 zfs-kmod 同版本这两条由 99-sanitize 出厂前硬断言兜底。
 # 改钉版策略就改这一段。
 GSTAB=$(newest_stable sys-devel/gcc)
 KSTAB=$(newest_stable sys-kernel/gentoo-kernel-bin)
@@ -252,7 +252,7 @@ KSTAB=$(newest_stable sys-kernel/gentoo-kernel-bin)
 #   - >=2.4.1：zfs-kmod 已合并进 sys-fs/zfs，一个包出用户态与 zfs.ko。
 #   - <=2.3.8：zfs 与 zfs-kmod 两个包，必须同版本。
 # 先取 sys-fs/zfs 的最新 stable,读它的 ebuild 判断是否已合并：合并了就只以它为准、内核上限取自该 ebuild；
-# 没合并才退回旧路(以 zfs-kmod 的最新 stable 为准)。这样 zfs-kmod 将来被移出树也不会把整锅炸掉。
+# 没合并才退回旧路(以 zfs-kmod 的最新 stable 为准)。这样 zfs-kmod 将来被移出树也不会把整轮失败。
 ZSTAB=$(newest_stable sys-fs/zfs)
 ZEB="${WORKDIR}/squashfs/var/db/repos/gentoo/sys-fs/zfs/zfs-${ZSTAB}.ebuild"
 if [ -n "${ZSTAB}" ] && grep -q 'MODULES_OPTIONAL_IUSE' "${ZEB}" 2>/dev/null; then
@@ -271,8 +271,8 @@ if [ -n "${ZKMAX}" ] && [ "$(printf '%s\n%s\n' "${ZKMAX}" "${KMM}" | sort -V | t
 fi
 mkdir -p "${WORKDIR}/squashfs/etc/portage/package.mask"
 cat > "${WORKDIR}/squashfs/etc/portage/package.mask/kernel-zfs" <<MASKEOF
-# 本文件由 build.sh 每锅动态生成：钉最新 amd64-stable gcc + 内核 + zfs,免手工维护(改法见 build.sh 生成它那段)。
-# 本锅算得:gcc ${GSTAB}、内核 ${KSTAB}、zfs ${ZSTAB}。mask 掉算出的 stable 版之上的测试版,portage 停在 stable。
+# 本文件由 build.sh 每轮动态生成：钉最新 amd64-stable gcc + 内核 + zfs,免手工维护(改法见 build.sh 生成它那段)。
+# 本轮算得:gcc ${GSTAB}、内核 ${KSTAB}、zfs ${ZSTAB}。mask 掉算出的 stable 版之上的测试版,portage 停在 stable。
 # sys-fs/zfs[dist-kernel] 依赖无版本的 virtual/dist-kernel，-uD @world 会挑版本最高的 provider。
 # 所以每一个 provider 都要钉，漏一个就会装出第二个超 OpenZFS 上限、没有 zfs.ko 的内核。
 # gentoo-kernel-modprep 也是 provider，它只铺模块树不装 vmlinuz，被选中时 linux-firmware 的
@@ -305,7 +305,7 @@ fi
 
 # 因为上面这步是 -uD 深度升级,dev-lang/perl 常在此升到新的大版本，而旧版本目录下的 perl 模块
 # 对新 perl 不可见，后续任何依赖它们的构建工具都会失败：help2man 需要 Locale::gettext，无法取得就让
-# app-crypt/sbsigntools(gentoo-kernel-bin 的 secureboot 依赖)在生成 man 页时编译失败，整锅中止。
+# app-crypt/sbsigntools(gentoo-kernel-bin 的 secureboot 依赖)在生成 man 页时编译失败，整轮中止。
 # 所以在这里、也就是后面所有 emerge 之前，先按新 perl 重建一次模块。没有可重建的时它很快退出。
 crun "command -v perl-cleaner >/dev/null 2>&1 || emerge -1q app-admin/perl-cleaner" || true
 crun "perl-cleaner --all -- --jobs ${CORES} -q" || true
@@ -368,7 +368,7 @@ crun sh -c 'O=/usr/src/linux/tools/objtool/objtool; if [ -e "$O" ]; then "$O" >/
 WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"${CORES}"' --keep-going --autounmask-continue --autounmask-keep-masks=y @world'
 # 因为 dev-lang/perl 是在本次 @world 中途升级的，升级后旧 perl 版本目录下的模块对新 perl 不可见，
 # 依赖它们的构建工具会失败：help2man 需要 Locale::gettext，无法取得就让 app-crypt/sbsigntools 这类
-# 用它生成 man 页的包编译失败，--keep-going 下最终 emerge 仍返回非零、整锅中止。
+# 用它生成 man 页的包编译失败，--keep-going 下最终 emerge 仍返回非零、整轮中止。
 # 所以第一次 @world 失败时先执行 perl-cleaner 把 perl 模块按新版本重建，再重试。
 if ! crun "${WORLD_EMERGE}"; then
     # @world 期间也可能再次升级 perl,所以失败后再重建一次模块并重试。
@@ -378,7 +378,7 @@ if ! crun "${WORLD_EMERGE}"; then
 fi
 
 # 显式补装 EXTRA_PKGS:@world 回溯可能把它们丢掉(如 calamares 撞 docutils 版本冲突被丢弃),
-# 显式 emerge 作参数不会被丢。逐个装 + || true,一个失败不连累其他与整锅。
+# 显式 emerge 作参数不会被丢。逐个装 + || true,一个失败不连累其他与整轮。
 for pkg in "${EXTRA_PKGS[@]}";do
     retry crun CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvq --usepkg=n --keep-going "${pkg}" || true
 done
@@ -397,7 +397,7 @@ else
     echo "[gigos] 警告:squashfs 内无 generate-zbm(sys-boot/zfsbootmenu 未装，可能 --keep-going 跳过)→ ZFS 根安装将不可启动(非 ZFS 安装不受影响)"
 fi
 # depclean / eclean 是清理步骤、不是装包。滚动 ~arch 的 subslot 严格性(如 depclean 抱怨
-# pillow 需 libavif:0/16.3=)会让它解析失败退非零；旧的 || exit 1 会把整锅构建作废。清理失败
+# pillow 需 libavif:0/16.3=)会让它解析失败退非零；旧的 || exit 1 会把整轮构建作废。清理失败
 # 最多留几个孤儿包,verify-iso 仍把关完整性。@live-rebuild 保留 || exit 1(那才是真重建)。
 crun emerge -c || true
 crun eclean-kernel --no-bootloader-update --no-mount -n 1 || true
