@@ -344,7 +344,8 @@ crun sh -c 'O=/usr/src/linux/tools/objtool/objtool; if [ -e "$O" ]; then "$O" >/
 # autounmask 只能自愈滚动树的 USE 与关键字漂移；python 目标迁移期 @system 构建后端的 3_13 桥接
 # portage 回溯收敛不了，--autounmask-backtrack=y 加 --backtrack=300 仍会早退，
 # 改由 package.use/python-transition 显式给足 USE。
-WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"${CORES}"' --keep-going --autounmask-continue --autounmask-keep-masks=y @world'
+# 提供内核模块的包只能本机编：远端 binhost 是对着 gentoo-kernel 编的，本盘装 gentoo-kernel-bin，KV 不同。
+WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"${CORES}"' --keep-going --usepkg-exclude "sys-fs/zfs sys-fs/zfs-kmod" --autounmask-continue --autounmask-keep-masks=y @world'
 # 因为 dev-lang/perl 可能在本次 @world 中途升级，升级后旧版本目录下的模块对新 perl 不可见：
 # help2man 无法取得 Locale::gettext，app-crypt/sbsigntools 这类用它生成 man 页的包编译失败，
 # --keep-going 下最终 emerge 仍返回非零并中止本次构建。故第一次 @world 失败时先重建 perl 模块再重试。
