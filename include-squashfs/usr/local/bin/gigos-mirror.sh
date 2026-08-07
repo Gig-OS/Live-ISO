@@ -1,17 +1,10 @@
 #!/bin/sh
-# 按所在地区自动选就近镜像，覆盖 GENTOO_MIRRORS 与 Portage 树的 git 同步地址。
-#
-# 判据优先用出口 IP 的国家码，无法取得时退回系统语言。镜像快慢取决于网络距离而非界面语言，
-# 在中国用英文界面的人应该用国内源，在海外用简体的人应该用海外源。
-#
-# 只有中国大陆用国内源。台湾与香港走当地镜像，不用大陆源。其余一律海外源，也是出厂基线，
+# 按所在地区自动选就近镜像，覆盖 GENTOO_MIRRORS、Portage 树的 git 同步地址与社区二进制包源。
+# 判据优先用出口 IP 的国家码，无法取得时退回系统语言：镜像快慢取决于网络距离而非界面语言。
+# 只有中国大陆用国内源，台湾与香港走当地镜像；其余一律海外源，海外源也是出厂基线，
 # 所以本服务只在判定为大陆或台港时才改写。
-#
-# GENTOO_MIRRORS 末尾追加社区 overlay 的 distfiles 源。它只提供 gentoo-zh 里那些包的源码，
-# 不能替代官方源，所以是追加。二进制包没有配，因为 binhost 的 profile 是
-# default/linux/amd64/23.0/desktop，与本 ISO 的 desktop/plasma/systemd 不一致，
-# portage 会静默跳过不匹配的包，配了也不会命中。
-#
+# GENTOO_MIRRORS 末尾追加社区 overlay 的 distfiles 源：它只提供 gentoo-zh 内各包的源码，
+# 不能替代官方源，所以是追加而非替换。
 # 与 gigos-cpuflags 同一套机制：写入的文件都带标记行，用户删掉标记即停止自动覆盖。
 # make.conf/ 与 repos.conf/ 都按字母序加载，本服务写的文件排在出厂文件之后，因而覆盖它们。
 set -u
@@ -28,7 +21,7 @@ for f in "$MC" "$RC" "$BR"; do
     fi
 done
 
-# 出口 IP 的国家码。3 秒超时，失败留空交给语言兜底，不阻塞开机。
+# 3 秒超时，失败留空交给语言兜底，不阻塞开机。
 CC=""
 if command -v curl >/dev/null 2>&1; then
     CC=$(curl -fsS -m 3 https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null \
@@ -42,7 +35,7 @@ LANG_VAL=""
 case "$CC" in
     CN)       REGION=cn ;;
     TW|HK|MO) REGION=tw ;;
-    "")  # 没拿到国家码，按语言猜。只有简体归大陆，其余中文变体不用大陆源。
+    "")  # 无法取得国家码时按语言判定，只有简体归大陆。
         case "$LANG_VAL" in
             zh_TW*|zh_HK*|zh_MO*) REGION=tw ;;
             zh_CN*)               REGION=cn ;;
@@ -56,10 +49,9 @@ case "$REGION" in
     cn)
         DESC="中国大陆"
         MIRRORS="https://mirrors.ustc.edu.cn/gentoo/ https://mirrors.bfsu.edu.cn/gentoo/ https://mirrors.tuna.tsinghua.edu.cn/gentoo/ https://mirrors.aliyun.com/gentoo/"
-        # 社区 overlay 的源码 tarball。追加在官方源之后，只补 gentoo-zh 里那些包，不替代官方源。
         ZH_DIST="https://mirrors.cernet.edu.cn/gentoo-zh https://mirror.nju.edu.cn/gentoo-zh https://mirror.nyist.edu.cn/gentoo-zh https://distfiles.gentoozh.org"
         ZH_BIN="https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64"
-        # 只有 gentoo 与 gentoo-zh 有国内 git 镜像。gig 是社区自有仓库无镜像，保持 GitHub。
+        # 只有 gentoo 与 gentoo-zh 有国内 git 镜像，gig 仓库无镜像，保持 GitHub。
         GIT_GENTOO="https://mirrors.cernet.edu.cn/gentoo-portage.git"
         GIT_ZH="https://mirrors.cernet.edu.cn/gentoo-zh.git"
         ;;
@@ -68,7 +60,7 @@ case "$REGION" in
         MIRRORS="http://ftp.twaren.net/Linux/Gentoo/ https://tw.mirrors.cicku.me/gentoo/ https://hk.mirrors.cicku.me/gentoo/ https://mirror.xtom.com.hk/gentoo/"
         ZH_DIST="https://distfiles.gentoozh.org"
         ZH_BIN="https://distfiles.gentoozh.org/binpkgs/x86-64"
-        # 当地没有实测可用的 Portage 树 git 镜像，GitHub 可直连，保持出厂值，不用大陆源。
+        # 当地无可用的 Portage 树 git 镜像，GitHub 可直连，保持出厂值。
         GIT_GENTOO=""
         GIT_ZH=""
         ;;
@@ -109,8 +101,8 @@ elif [ -e "$RC" ] && grep -q "$MARK" "$RC"; then
     rm -f "$RC"
 fi
 
-# 社区二进制包源。portage 逐包判断，profile 与 USE 匹配的走二进制，不匹配的照常编译，
-# 所以这里配上不会有副作用。验签公钥与信任由构建期的 06-binhost-trust hook 备好。
+# 社区二进制包源。portage 逐包判断，profile 与 USE 匹配的取二进制包，不匹配的照常编译源码。
+# 验签公钥与信任由构建期的 06-binhost-trust hook 准备。
 mkdir -p /etc/portage/binrepos.conf
 {
     echo "$MARK"

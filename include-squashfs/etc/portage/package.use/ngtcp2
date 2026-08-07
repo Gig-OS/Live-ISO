@@ -1,4 +1,3 @@
-# net-fs/samba ← kde-apps/kio-extras[samba] ← kde-apps/dolphin 需要
-# net-libs/ngtcp2[gnutls];不预置该 USE,emerge 会因 autounmask 提前终止回溯，
-# 导致 @live-rebuild 整个解析失败(连带 go 循环依赖、mesa 等都报错)。
+# kde-apps/dolphin 经 kio-extras[samba] 与 net-fs/samba 需要 net-libs/ngtcp2[gnutls]。
+# 不预置该 USE，emerge 会因 autounmask 提前终止回溯，导致 @live-rebuild 整体解析失败。
 net-libs/ngtcp2 gnutls

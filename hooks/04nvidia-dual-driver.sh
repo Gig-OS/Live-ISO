@@ -1,10 +1,8 @@
 #!/bin/bash
-# 双显卡驱动收尾:x11-drivers/nvidia-drivers 的 ebuild 会在
-# /etc/modprobe.d/nvidia.conf 写一行 "blacklist nouveau",静态禁掉 nouveau。
-# 但本 ISO/系统默认用 nouveau(开箱即亮，兼容性最好),闭源 nvidia 仅作可选：
-# 由 grub 的闭源 NVIDIA 驱动启动项用内核命令行
-# (modprobe.blacklist=nouveau nvidia-drm.modeset=1)按需启用。
-# 故必须注释掉这条静态黑名单，否则默认开机 nouveau 起不来 → 黑屏。
+# x11-drivers/nvidia-drivers 会在 /etc/modprobe.d/nvidia.conf 写入 `blacklist nouveau`，静态禁用 nouveau。
+# 本 ISO 默认使用 nouveau，闭源 nvidia 仅由 grub 的闭源启动项经内核命令行
+# （modprobe.blacklist=nouveau nvidia-drm.modeset=1）按需启用。
+# 必须注释掉这条静态黑名单，否则默认启动时 nouveau 无法加载并黑屏。
 NVCONF="${WORKDIR}/squashfs/etc/modprobe.d/nvidia.conf"
 if [ -f "${NVCONF}" ]; then
     sed -i 's/^[[:space:]]*blacklist[[:space:]]\+nouveau/#&/' "${NVCONF}"

@@ -1,9 +1,8 @@
 #!/bin/bash
-# 桌面上的关闭自动休眠和锁屏按钮（以 live 用户执行，无需 root,powerdevil/锁屏是用户级配置）。
-# 装机可能要几十分钟，机器不该 15 分钟自动休眠/锁屏中断。本按钮把当前会话的自动休眠、熄屏、
-# 自动锁屏都关掉（屏幕仍可变暗），立即生效并弹框反馈。提示文案跟随会话 LANG，三语言。
-# 注:live skel 已默认禁这些(powerdevilrc/kscreenlockerrc)；本按钮供显式一键确保 + 即时生效。
-# 装好的系统由 calamares 清理复位，恢复 KDE 默认电源管理。
+# 桌面上关闭自动休眠与锁屏的按钮，以 live 用户执行:powerdevil 与锁屏都是用户级配置，无需 root。
+# 装机可能持续数十分钟，不应被自动休眠、熄屏或自动锁屏打断，本按钮对当前会话关闭三者。
+# live skel 已默认禁用这些（powerdevilrc、kscreenlockerrc），本按钮提供显式确认与即时生效；
+# 装好的系统由 Calamares 复位，恢复 KDE 默认电源管理。
 set -e
 export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$(id -u)/bus}"
 
@@ -13,7 +12,7 @@ kwriteconfig6 --file powerdevilrc --group AC      --group DPMSControl --key idle
 kwriteconfig6 --file powerdevilrc --group Battery --group DPMSControl --key idleTime 86400
 kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock false
 
-# 立即生效:powerdevil 监听配置文件变更会自动重读；再显式戳一下兜底。
+# powerdevil 会监听配置文件变更并自动重读，此处再显式触发一次兜底。
 qdbus6 org.kde.Solid.PowerManagement /org/kde/Solid/PowerManagement refreshStatus >/dev/null 2>&1 || true
 qdbus6 org.freedesktop.ScreenSaver /ScreenSaver configure >/dev/null 2>&1 || true
 

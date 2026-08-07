@@ -1,6 +1,6 @@
 #!/bin/bash
-# 桌面 SSH 按钮的前端(以 live 用户跑):pkexec 调 root 后端(会弹框要密码授权),
-# 再用 kdialog 报告结果与连接信息。提示文案跟随会话 LANG,三语言(简/繁/英)。
+# 桌面 SSH 按钮的前端，以 live 用户执行：经 pkexec 调用 root 后端，再用 kdialog 报告结果与连接信息。
+# 提示文案按会话 LANG 分为简体、繁体、英文三套，各自用词刻意不同，不要统一。
 MODE="${1:-}"
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 

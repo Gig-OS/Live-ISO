@@ -1,5 +1,5 @@
 # gigos-auto-mirror
-# 出厂基线是海外源。开机后 gigos-mirror.service 按出口 IP 国家码判定地区，
-# 取不到再按系统语言，仅在中国大陆或台港时改写为就近镜像。
-# 删除本行标记即停止自动覆盖，可改成自己的值(或执行 mirrorselect)。
+# 出厂基线是海外源。开机后 gigos-mirror.service 按出口 IP 国家码判定地区，无法取得时按系统语言，
+# 仅在中国大陆或台港时改写为就近镜像。
+# 删除上面这行标记即停止自动覆盖，可改成自己的值，或执行 `mirrorselect`。
 GENTOO_MIRRORS="https://distfiles.gentoo.org/ https://gentoo.osuosl.org/ https://ftp.fau.de/gentoo/"

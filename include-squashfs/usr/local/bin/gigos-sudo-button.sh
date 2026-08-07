@@ -1,6 +1,6 @@
 #!/bin/bash
-# 桌面上的开启 sudo 免密按钮前端(以 live 用户跑):pkexec 调 root 后端写 sudoers drop-in(会弹框授权一次),
-# 再用 kdialog 反馈。提示文案跟随会话 LANG,三语言(简/繁/英)。
+# 桌面上开启 sudo 免密按钮的前端，以 live 用户执行：经 pkexec 调用 root 后端写 sudoers drop-in，
+# 再用 kdialog 反馈。提示文案按会话 LANG 分为简体、繁体、英文三套，各自用词刻意不同，不要统一。
 case "${LANG:-}" in
   en*)
     T_FAIL="Failed to enable passwordless sudo (authorization cancelled or error)."

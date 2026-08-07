@@ -1,8 +1,7 @@
 [Unit]
 Description=Pick regional Gentoo mirrors by exit IP or system language (gig-os)
-# 判据优先是出口 IP 的国家码，所以要等网络就绪；取不到国家码时脚本退回系统语言，
-# 因此网络起不来也不会失败，只是判得粗一些。脚本内 curl 超时 3 秒，不会拖住开机。
-# After gigos-live-lang：live 下先让它按 gigos.lang= 写好 locale.conf，本服务才有语言可读。
+# 判据优先取出口 IP 的国家码，所以要等网络就绪；无法取得时脚本退回系统语言，网络不可用也不会失败。
+# After gigos-live-lang 是为了让 live 先按 `gigos.lang=` 写好 locale.conf，本服务才有语言可读。
 # 装好的系统没有 gigos-live-lang，locale.conf 由 Calamares 写，After 对不存在的单元无副作用。
 Wants=network-online.target
 After=local-fs.target network-online.target gigos-live-lang.service

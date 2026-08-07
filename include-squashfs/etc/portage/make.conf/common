@@ -3,9 +3,9 @@ CFLAGS="${COMMON_FLAGS}"
 CXXFLAGS="${COMMON_FLAGS}"
 FCFLAGS="${COMMON_FLAGS}"
 FFLAGS="${COMMON_FLAGS}"
-# MAKEOPTS 构建时由 refreshconfig() 按构建机重写、开机后由 gigos-cpuflags 按真机内存/核数覆盖；此处仅手动构建的兜底占位。
+# MAKEOPTS 在构建期由 refreshconfig() 按构建机重写，开机后由 gigos-cpuflags 按真机内存与核数覆盖，
+# 此处仅为手动构建时的兜底值。
 MAKEOPTS="-j32"
 
-# Python 跟随 profile 默认(2026 树 = python3_14):calamares 已改用 gig overlay 的
-# app-admin/calamares-3.3.14-r8(PYTHON_COMPAT 含 python3_14,源自 gentoo PR 45939),
-# 不再需要 pin python3_13。整机单一 3_14 变体，与树默认一致、镜像精简、不留冗余。
+# Python 跟随 profile 默认（2026 树为 python3_14），不再 pin python3_13:全机单一变体，
+# 与树默认一致且镜像精简。
