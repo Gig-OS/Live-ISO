@@ -155,7 +155,7 @@ NVKO=$(grep -hoE 'lib/modules/[^/]+/[^ ]*nvidia\.ko' "${SQROOT}"/var/db/pkg/x11-
 if [ -n "${NVKO}" ]; then
     NVKV=$(printf '%s' "${NVKO}" | cut -d/ -f3)
     [ "${NVKV}" = "${KMODVER}" ] \
-        || { echo "[99-sanitize] 致命：nvidia 的模块编给内核 ${NVKV}，本机内核是 ${KMODVER} → 装到了别处编的 binpkg,闭源启动项会黑屏,中止(build.sh 的 --usepkg-exclude 要盖住 x11-drivers/nvidia-drivers)"; exit 1; }
+        || { echo "[99-sanitize] 致命：nvidia 的模块编给内核 ${NVKV}，本机内核是 ${KMODVER} → 装到了别处编的 binpkg,闭源启动项会黑屏，中止(build.sh 的 --usepkg-exclude 要盖住 x11-drivers/nvidia-drivers)"; exit 1; }
 fi
 
     find "${SQROOT}/lib/modules/${KMODVER}" -name 'spl.ko*' 2>/dev/null | grep -q . \
