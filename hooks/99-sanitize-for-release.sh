@@ -149,6 +149,15 @@ if [ -x "${SQROOT}/usr/bin/generate-zbm" ] || [ -x "${SQROOT}/usr/sbin/generate-
         fi
         exit 1
     fi
+# nvidia 的内核模块同样只能本机编。zfs 那条断言之外再查一次：出 .ko 的包只有 zfs 与
+# nvidia-drivers，后者装错 KV 时没有别的闸门拦得住，用户选闭源启动项会直接黑屏。
+NVKO=$(grep -hoE 'lib/modules/[^/]+/[^ ]*nvidia\.ko' "${SQROOT}"/var/db/pkg/x11-drivers/nvidia-drivers-*/CONTENTS 2>/dev/null | head -n1)
+if [ -n "${NVKO}" ]; then
+    NVKV=$(printf '%s' "${NVKO}" | cut -d/ -f3)
+    [ "${NVKV}" = "${KMODVER}" ] \
+        || { echo "[99-sanitize] 致命：nvidia 的模块编给内核 ${NVKV}，本机内核是 ${KMODVER} → 装到了别处编的 binpkg,闭源启动项会黑屏,中止(build.sh 的 --usepkg-exclude 要盖住 x11-drivers/nvidia-drivers)"; exit 1; }
+fi
+
     find "${SQROOT}/lib/modules/${KMODVER}" -name 'spl.ko*' 2>/dev/null | grep -q . \
         || echo "[99-sanitize] 提示：${KMODVER} 有 zfs.ko 但无独立 spl.ko(较新 OpenZFS 把 spl 并进 zfs.ko,正常)"
     # 用户态与内核模块必须同版本，只查 zfs.ko 是否存在会漏掉版本不一致的情况。

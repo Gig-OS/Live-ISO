@@ -345,7 +345,8 @@ crun sh -c 'O=/usr/src/linux/tools/objtool/objtool; if [ -e "$O" ]; then "$O" >/
 # portage 回溯收敛不了，--autounmask-backtrack=y 加 --backtrack=300 仍会早退，
 # 改由 package.use/python-transition 显式给足 USE。
 # 提供内核模块的包只能本机编：远端 binhost 是对着 gentoo-kernel 编的，本盘装 gentoo-kernel-bin，KV 不同。
-WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"${CORES}"' --keep-going --usepkg-exclude "sys-fs/zfs sys-fs/zfs-kmod" --autounmask-continue --autounmask-keep-masks=y @world'
+# 出 .ko 的只有 sys-fs/zfs 与 x11-drivers/nvidia-drivers，新增这类包时记得加进来。
+WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"${CORES}"' --keep-going --usepkg-exclude "sys-fs/zfs sys-fs/zfs-kmod x11-drivers/nvidia-drivers" --autounmask-continue --autounmask-keep-masks=y @world'
 # 因为 dev-lang/perl 可能在本次 @world 中途升级，升级后旧版本目录下的模块对新 perl 不可见：
 # help2man 无法取得 Locale::gettext，app-crypt/sbsigntools 这类用它生成 man 页的包编译失败，
 # --keep-going 下最终 emerge 仍返回非零并中止本次构建。故第一次 @world 失败时先重建 perl 模块再重试。
