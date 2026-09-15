@@ -346,7 +346,10 @@ crun sh -c 'O=/usr/src/linux/tools/objtool/objtool; if [ -e "$O" ]; then "$O" >/
 # 改由 package.use/python-transition 显式给足 USE。
 # 提供内核模块的包只能本机编：远端 binhost 是对着 gentoo-kernel 编的，本盘装 gentoo-kernel-bin，KV 不同。
 # 出 .ko 的只有 sys-fs/zfs 与 x11-drivers/nvidia-drivers，新增这类包时记得加进来。
-WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"${CORES}"' --keep-going --usepkg-exclude "sys-fs/zfs sys-fs/zfs-kmod x11-drivers/nvidia-drivers" --autounmask-continue --autounmask-keep-masks=y @world'
+# sys-apps/util-linux 也只能本机编，理由不同：它与 cryptsetup 互相依赖成环，从源码编时 libcryptsetup
+# 是 DEPEND，portage 会先装 cryptsetup；取二进制包没有 DEPEND 可满足，portage 拆环时把 util-linux
+# 排在前面，装完 mount 就缺 libcryptsetup.so，连下一个包的沙盒都起不来（2026-09-14 那一轮整轮因此失败）。
+WORLD_EMERGE='CONFIG_PROTECT="-*" FEATURES="-merge-sync" emerge -uvDNq --jobs '"${CORES}"' --keep-going --usepkg-exclude "sys-fs/zfs sys-fs/zfs-kmod x11-drivers/nvidia-drivers sys-apps/util-linux" --autounmask-continue --autounmask-keep-masks=y @world'
 # 因为 dev-lang/perl 可能在本次 @world 中途升级，升级后旧版本目录下的模块对新 perl 不可见：
 # help2man 无法取得 Locale::gettext，app-crypt/sbsigntools 这类用它生成 man 页的包编译失败，
 # --keep-going 下最终 emerge 仍返回非零并中止本次构建。故第一次 @world 失败时先重建 perl 模块再重试。
