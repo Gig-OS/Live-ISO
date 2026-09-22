@@ -395,7 +395,10 @@ if ! crun emerge -c > "${depclean_log}" 2>&1; then
         | awk '{print "=" $2}' | sort -u | tr '\n' ' ')
     if [[ -n ${stale} ]]; then
         echo "[gigos] depclean 被过期的 := 依赖挡住，从源码重建后再清理：${stale}"
-        crun "emerge -1q --usepkg=n ${stale}" || true
+        # --getbinpkg=n 一起给：make.conf 的 FEATURES=getbinpkg 让 portage 把
+        # --getbinpkg 设成真，接着无条件把 --usepkg 也改回真，单给 --usepkg=n 会被
+        # 悄悄推翻（portage actions.py），取回的还是那个记着过期子槽的二进制包。
+        crun "emerge -1q --getbinpkg=n --usepkg=n ${stale}" || true
         crun emerge -c || true
     fi
 else
