@@ -177,7 +177,9 @@ function buildiso () {
         mkdir -p "${WORKDIR}/squashfs/mnt/gen-iso"
         mount --bind "${WORKDIR}" "${WORKDIR}/squashfs/mnt/gen-iso"
     fi
-    crun grub-mkrescue -o /mnt/gen-iso/gig-os-"$(date +%Y%m%d)".iso /mnt/gen-iso/iso -- -as mkisofs -V 'Gig-OS' || exit 1
+    # -iso-level 3：ISO 9660 level 2 单文件上限 4 GiB，squashfs.img 超过就被 xorriso 拒绝
+    # （2026-09-21）。level 3 允许多 extent 大文件，GRUB 与内核 isofs 都支持。
+    crun grub-mkrescue -o /mnt/gen-iso/gig-os-"$(date +%Y%m%d)".iso /mnt/gen-iso/iso -- -as mkisofs -iso-level 3 -V 'Gig-OS' || exit 1
 }
 
 trap cleanmount INT
@@ -382,7 +384,23 @@ fi
 # depclean 与 eclean 是清理步骤而非安装。滚动 ~arch 的 subslot 严格性（例如 depclean 要求
 # pillow 依赖 libavif:0/16.3=）会让解析失败并返回非零，用 || exit 1 会作废整次构建。
 # 清理失败最多留下几个孤儿包，完整性仍由 verify-iso 把关。@live-rebuild 是真正的重建，保留 || exit 1。
-crun emerge -c || true
+# depclean 只要有一个已装包的 := 依赖记录的子槽已经没有包提供（例如 perl 升级后
+# virtual/perl-* 还记着 dev-lang/perl:0/5.42=），就整个拒绝执行，一个包都不清；
+# 2026-09-21 那轮因此留下 go、automake、nasm 等构建期依赖，squashfs 涨过 4 GiB。
+# 它会把挡路的包列在「pulled in by:」下面，从源码重建这些包再清一次。
+depclean_log=/tmp/depclean.log
+if ! crun emerge -c > "${depclean_log}" 2>&1; then
+    cat "${depclean_log}"
+    stale=$(grep -oE '^ \* +[a-z0-9-]+/[A-Za-z0-9+_.-]+-[0-9][A-Za-z0-9._-]*$' "${depclean_log}" \
+        | awk '{print "=" $2}' | sort -u | tr '\n' ' ')
+    if [[ -n ${stale} ]]; then
+        echo "[gigos] depclean 被过期的 := 依赖挡住，从源码重建后再清理：${stale}"
+        crun "emerge -1q --usepkg=n ${stale}" || true
+        crun emerge -c || true
+    fi
+else
+    cat "${depclean_log}"
+fi
 crun eclean-kernel --no-bootloader-update --no-mount -n 1 || true
 
 for hook in "${WORKDIR}"/hooks/*;do
